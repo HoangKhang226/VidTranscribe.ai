@@ -4,36 +4,45 @@
 
 ---
 
-## 🌟 Tính Năng Nổi Bật (Advanced Features)
+## Tính Năng Nổi Bật (Advanced Features)
 
-### 1. 🧠 Dynamic Two-Pass Translation (Dịch Thuật Đa Ngành Động)
+### 1. Dynamic Two-Pass Translation (Dịch Thuật Đa Ngành Động)
+
 Không giống các hệ thống dịch hardcode, VidTranscribe.ai áp dụng luồng chạy 2 bước (Two-Pass):
-- **Pass 1 (Context Analyzer):** LLM quét lướt toàn bộ kịch bản để nhận diện ngữ cảnh và trích xuất tự động các Thuật ngữ chuyên ngành, Tên riêng (Proper Nouns) phù hợp với lĩnh vực của video (VD: Y tế, Tài chính, IT).
-- **Pass 2 (Translator Injector):** Các thuật ngữ này được bơm động (inject) vào Hệ quy tắc cốt lõi (Core Rules). Hệ thống sẽ bắt LLM bảo toàn thuật ngữ (VD: *Front-end, Copilot, MRI*) và dịch thoát ý tự nhiên (VD: *"You don't."* -> *"Chưa chắc đâu."* thay vì *"Bạn không làm."*).
 
-### 2. 🛡️ Robust Fallback System (Cơ Chế Chống Hallucination)
+- **Pass 1 (Context Analyzer):** LLM quét lướt toàn bộ kịch bản để nhận diện ngữ cảnh và trích xuất tự động các Thuật ngữ chuyên ngành, Tên riêng (Proper Nouns) phù hợp với lĩnh vực của video (VD: Y tế, Tài chính, IT).
+- **Pass 2 (Translator Injector):** Các thuật ngữ này được bơm động (inject) vào Hệ quy tắc cốt lõi (Core Rules). Hệ thống sẽ bắt LLM bảo toàn thuật ngữ (VD: _Front-end, Copilot, MRI_) và dịch thoát ý tự nhiên (VD: _"You don't."_ -> _"Chưa chắc đâu."_ thay vì _"Bạn không làm."_).
+
+### 2. Robust Fallback System (Cơ Chế Chống Hallucination)
+
 Với các LLM local cỡ nhỏ (như Qwen 2.5 7B), hiện tượng "ảo giác" (nhả chữ tiếng Trung, rò rỉ prompt) rất dễ xảy ra. Pipeline giải quyết triệt để bằng hệ thống Fallback 3 tầng:
+
 - Tầng 1: Dịch theo Batch JSON (Tốc độ cao).
 - Tầng 2: Nếu lỗi/rò rỉ -> Chuyển sang Dịch Paragraph thô.
 - Tầng 3: Nếu vẫn lỗi -> Rã nhỏ kịch bản và Dịch từng câu lẻ (Kèm Context) để ép model tuân thủ.
 
-### 3. 🗣️ G2P Engine (Phiên Âm Thuật Ngữ Động)
+### 3. G2P Engine (Phiên Âm Thuật Ngữ Động)
+
 Thay vì để các mô hình TTS tiếng Việt (như Edge-TTS vi-VN) đọc sai bét các từ tiếng Anh hoặc từ chối sinh âm thanh, hệ thống tích hợp bộ mã hóa G2P (Grapheme-to-Phoneme):
+
 - Tự động nhận diện từ vựng tiếng Anh trong câu tiếng Việt.
-- Chuyển đổi thành phiên âm bồi chuẩn tả (VD: *"Agent"* -> *"Ây dần"*, *"seamlessly"* -> *"xim lét xli"*).
+- Chuyển đổi thành phiên âm bồi chuẩn tả (VD: _"Agent"_ -> _"Ây dần"_, _"seamlessly"_ -> _"xim lét xli"_).
 - Chỉ phiên âm đúng các thuật ngữ cần thiết, **không bao giờ over-phonetize** (phiên âm lố) các câu tiếng Việt bình thường.
 
-### 4. ⏱️ "Cheating Gaps" Audio Sync (Đồng Bộ Âm Thanh Thông Minh)
+### 4. "Cheating Gaps" Audio Sync (Đồng Bộ Âm Thanh Thông Minh)
+
 Khi thời lượng dịch tiếng Việt dài hơn tiếng Anh gốc, thay vì "ép tốc độ" (Speedup x1.5, x1.8) làm biến dạng giọng đọc thành tiếng sóc chuột (chipmunk), hệ thống áp dụng thuật toán **Cheating Gaps**:
+
 - Tự động tính toán các khoảng lặng (silence gaps) trước và sau mỗi câu phụ đề.
 - "Vay mượn" thời gian từ các khoảng trống này (tối đa 1.5s) để mở rộng khung giờ nói.
 - Giảm thiểu tối đa việc phải ép tốc độ đọc, giữ cho âm thanh phát ra tự nhiên nhất mà vẫn **chuẩn khớp 100% với khung hình**.
 
 ---
 
-## ⚙️ Pipeline Workflow
+## Pipeline Workflow
 
 Hệ thống hoạt động theo 6 bước tuần tự, được kiểm soát bộ nhớ nghiêm ngặt để có thể chạy mượt mà trên phần cứng giới hạn:
+
 1. `step1_extract.py`: Tách âm thanh từ file Video gốc.
 2. `step2_stt.py`: Nhận dạng giọng nói (Speech-to-Text) tạo phụ đề tiếng Anh gốc.
 3. `step3_sync.py`: Đồng bộ và chia nhỏ đoạn (Paragraph Batching).
@@ -43,15 +52,14 @@ Hệ thống hoạt động theo 6 bước tuần tự, được kiểm soát b�
 
 ---
 
-## 🛠️ Công Nghệ Sử Dụng (Tech Stack)
+## Công Nghệ Sử Dụng (Tech Stack)
+
 - **Core LLM:** Qwen 2.5 7B (qua Ollama).
 - **Orchestration:** LangChain, Pydantic.
 - **Audio Processing:** Pydub, Edge-TTS.
 - **UI/UX:** Gradio (Giao diện web trực quan).
 
 ---
-
-*📝 Dự án được phát triển và tối ưu hóa để chạy nội bộ (Local/On-Premise), bảo mật hoàn toàn dữ liệu kịch bản và video.*: Hệ Sinh Thái Lồng Tiếng & Dịch Phụ Đề Video Tự Động Đa Ngành
 
 ## Tầm Nhìn Dự Án
 
