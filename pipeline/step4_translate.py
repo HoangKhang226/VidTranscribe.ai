@@ -23,44 +23,108 @@ class EnglishExtractionResult(BaseModel):
 class TransliterationResult(BaseModel):
     transliterations: Dict[str, str] = Field(description="Bản đồ map từ tiếng Anh sang cách đọc tiếng Việt. Ví dụ: {'qdrant': 'quát đrơnt'}")
 
-# Class structures for Batch Translation
-class BatchTranslationItem(BaseModel):
-    index: int = Field(description="Mã số index của câu thoại đầu vào.")
-    translated_text: str = Field(description="Bản dịch tiếng Việt tương ứng cho câu thoại đó, giữ nguyên thuật ngữ tiếng Anh chuyên ngành.")
+# (Đã loại bỏ Batch Translation classes)
 
-class BatchTranslationResult(BaseModel):
-    translations: List[BatchTranslationItem] = Field(description="Danh sách các câu đã dịch tương ứng với đầu vào.")
+def extract_tech_terms(srt_en_path: str, model_name: str) -> list[str]:
+    """
+    Đọc tối đa 20 câu thoại đầu tiên từ kịch bản phụ đề tiếng Anh en.srt
+    và dùng Ollama để trích xuất các thuật ngữ chuyên ngành đa ngành, từ viết tắt, tên riêng
+    hoặc khái niệm khó dịch cần giữ nguyên dạng tiếng Anh gốc.
+    """
+    logger.info("Đang tự động trích xuất thuật ngữ chuyên ngành đa ngành từ kịch bản phụ đề...")
+    entries = parse_srt(srt_en_path)
+    if not entries:
+        return []
+        
+    # Lấy tối đa 20 câu thoại đầu (khoảng 1 phút) để hiểu ngữ cảnh chung của video
+    sample_text = " ".join([e.text for e in entries[:20]])
+    
+    ollama_base_url = OLLAMA_API_URL.replace("/api/generate", "")
+    llm = ChatOllama(
+        model=model_name,
+        base_url=ollama_base_url,
+        temperature=0.1
+    )
+    
+    class KeywordExtraction(BaseModel):
+        keywords: List[str] = Field(description="Danh sách các thuật ngữ, từ viết tắt, tên công nghệ, từ mượn tiếng Anh quan trọng xuất hiện trong kịch bản (viết thường).")
+        
+    extraction_prompt = ChatPromptTemplate.from_messages([
+        ("system", (
+            "Bạn là một chuyên gia ngôn ngữ học đa ngành. Nhiệm vụ của bạn là phân tích đoạn kịch bản video tiếng Anh đầu vào "
+            "(thuộc bất kỳ lĩnh vực nào như IT, khoa học, y tế, kinh tế, cơ khí, nghệ thuật...) và trích xuất các thuật ngữ "
+            "chuyên ngành, từ viết tắt, hoặc cụm danh từ tiếng Anh mà khi dịch sang tiếng Việt NÊN GIỮ NGUYÊN (không dịch nghĩa) "
+            "để đảm bảo tính tự nhiên và chính xác của phụ đề.\n"
+            "Ví dụ:\n"
+            "- Lĩnh vực IT: 'ai agents', 'workflow', 'llm', 'rag', 'overfitting', 'api'\n"
+            "- Lĩnh vực sinh/y học: 'mrna', 'crispr', 'vaccine', 'dna'\n"
+            "- Lĩnh vực kinh doanh: 'b2b', 'marketing', 'pitch deck', 'equity'\n"
+            "Hãy trả về danh sách các thuật ngữ viết thường."
+        )),
+        ("human", "Hãy trích xuất thuật ngữ chuyên ngành từ đoạn kịch bản sau, nếu có quá ít, hãy tự dùng kiến thức có sẵn để trích ra, đoạn kịch bản \n{text}")
+    ])
+    
+    chain = extraction_prompt | llm.with_structured_output(KeywordExtraction)
+    
+    extracted = []
+    try:
+        res = chain.invoke({"text": sample_text})
+        extracted = [w.lower().strip() for w in res.keywords if w.strip()]
+        logger.info(f"Đã trích xuất được các thuật ngữ: {extracted}")
+    except Exception as e:
+        logger.error(f"Lỗi khi trích xuất thuật ngữ từ kịch bản: {e}")
+        
+    return extracted
 
-TRANSLATE_SYSTEM_PROMPT = """Bạn là một biên dịch viên phụ đề song ngữ Anh-Việt chuyên nghiệp.
-Nhiệm vụ của bạn là dịch câu tiếng Anh mục tiêu sang tiếng Việt ngắn gọn và tự nhiên.
+TRANSLATION_RULES = """1. DỊCH THEO NGỮ CẢNH (Contextual): Phải hiểu ý đồ của cả đoạn để dịch thoát ý.
+   - Ví dụ: "You think you know X? You don't." -> "Bạn nghĩ bạn hiểu X? Chưa chắc đâu / Bạn lầm rồi" (KHÔNG dịch là "Bạn không làm").
+   - Nếu video nói "plain English", hãy dịch đúng là "tiếng Anh thông thường" hoặc "ngôn ngữ tự nhiên" (KHÔNG tự ý bản địa hóa thành "tiếng Việt").
+2. GIỮ NGUYÊN TÊN RIÊNG & THUẬT NGỮ CỐT LÕI (Không dịch):
+   - Tuyệt đối giữ nguyên tên sản phẩm thương mại, tên phần mềm (VD: Copilot Studio, ChatGPT).
+   - Giữ nguyên các thuật ngữ kiến trúc/chuyên ngành mang tính toàn cầu (VD: front-end, back-end, Agent, AI, API).
+   - Danh sách các từ CẦN GIỮ NGUYÊN: {tech_terms_str}.
+   - Xưng hô "Agent" giữ nguyên hoặc dịch là "Tác nhân" (Tuyệt đối KHÔNG dịch là "Đại diện").
+3. TỰ ĐỘNG SỬA LỖI STT: Nếu kịch bản có lỗi nghe nhầm (VD: "leap capture" -> "thu thập lead" / "lead capture"), hãy TỰ ĐỘNG dịch theo thuật ngữ đúng.
+4. VĂN PHONG TỰ NHIÊN: Đảm bảo văn bản đầu ra là 100% TIẾNG VIỆT chuẩn xác. KHÔNG giữ lại tiếng Anh giao tiếp (VD: "seamlessly"). Chỉnh lại văn phong nếu LLM dịch sai (VD: sửa "Đã như bạn đã thuê..." thành "Cứ như bạn đã thuê...").
+5. KHÔNG dùng teencode. KHÔNG dịch sang ngôn ngữ thứ 3."""
+
+PARAGRAPH_TRANSLATE_SYSTEM_PROMPT = f"""Bạn là một biên dịch viên phụ đề song ngữ Anh-Việt cao cấp, chuyên dịch thuật đa ngành (IT, y tế, kinh tế, v.v.).
+Nhiệm vụ của bạn là dịch NGUYÊN MỘT ĐOẠN VĂN TIẾNG ANH sang tiếng Việt sao cho tự nhiên, mượt mà như người bản xứ nói chuyện, tuyệt đối không dịch kiểu word-by-word (word-for-word).
 
 QUY TẮC BẮT BUỘC:
-1. Dịch tự nhiên, đúng ngữ cảnh của câu. BẠN PHẢI DỊCH MỌI CÂU THOẠI ĐƯỢC CUNG CẤP, tuyệt đối không từ chối dịch hoặc trả về các câu trả lời giải thích, xin lỗi, từ chối.
-2. GIỚI HẠN ĐỘ DÀI: Câu dịch trong "translated_text" KHÔNG ĐƯỢC VƯỢT QUÁ {max_chars} ký tự (bao gồm cả khoảng trắng). Hãy chọn lọc từ ngữ cực kỳ cô đọng, súc tích nhưng vẫn giữ nguyên nghĩa cốt lõi.
-3. Trong "translated_text": Giữ nguyên dạng viết tiếng Anh của các thuật ngữ chuyên ngành, kỹ thuật, từ mượn hoặc tên riêng tiếng Anh (ví dụ: 'AI', 'marketing', 'B2B', 'DNA', 'API', 'slide', 'CEO') để hiển thị làm phụ đề chuyên nghiệp.
-4. TUYỆT ĐỐI KHÔNG sử dụng các từ viết tắt, ký hiệu chat, teencode, hoặc viết tắt tiếng Việt không chuẩn (ví dụ: không được dùng 'đk', 'khng', 'mdl', 'kb', 'vs', 'đc'). Các từ tiếng Việt phải được viết đầy đủ, chính tả rõ ràng.
-5. TUYỆT ĐỐI KHÔNG dịch sang tiếng Trung (không chứa bất kỳ chữ Hán hay chữ tượng hình nào), tiếng Nhật, tiếng Hàn hay ngôn ngữ khác ngoài tiếng Việt. Bản dịch bắt buộc phải sử dụng chữ cái Latinh tiếng Việt.
+{TRANSLATION_RULES}
+6. CHỈ TRẢ VỀ bản dịch tiếng Việt, KHÔNG giải thích, KHÔNG thêm ngoặc kép bao quanh.
 """
 
-BATCH_TRANSLATE_SYSTEM_PROMPT = """Bạn là một biên dịch viên phụ đề song ngữ Anh-Việt chuyên nghiệp.
-Nhiệm vụ của bạn là dịch danh sách các câu tiếng Anh mục tiêu được cung cấp sang tiếng Việt ngắn gọn và tự nhiên.
-
-QUY TẮC BẮT BUỘC:
-1. Dịch tự nhiên, đúng ngữ cảnh của câu. BẠN PHẢI DỊCH MỌI CÂU THOẠI ĐƯỢC CUNG CẤP trong danh sách.
-2. Với mỗi câu thoại trong danh sách, bản dịch trong "translated_text" phải giữ nguyên chỉ số "index" tương ứng từ đầu vào.
-3. Giữ nguyên dạng viết tiếng Anh của các thuật ngữ chuyên ngành, kỹ thuật, từ mượn hoặc tên riêng tiếng Anh (ví dụ: 'AI', 'marketing', 'B2B', 'DNA', 'API', 'slide', 'CEO') để hiển thị làm phụ đề chuyên nghiệp.
-4. TUYỆT ĐỐI KHÔNG sử dụng các từ viết tắt, ký hiệu chat, teencode, hoặc viết tắt tiếng Việt không chuẩn. Các từ tiếng Việt phải được viết đầy đủ, chính tả rõ ràng.
-5. TUYỆT ĐỐI KHÔNG dịch sang tiếng Trung (không chứa bất kỳ chữ Hán hay chữ tượng hình nào), tiếng Nhật, tiếng Hàn hay ngôn ngữ khác ngoài tiếng Việt. Bản dịch bắt buộc phải sử dụng chữ cái Latinh tiếng Việt.
-"""
-
-EXTRACTION_SYSTEM_PROMPT = """Bạn là một trợ lý phân tích ngôn ngữ.
-Nhiệm vụ của bạn là đọc câu tiếng Việt được cung cấp và trích xuất tất cả các từ hoặc cụm từ tiếng Anh chuyên ngành, kỹ thuật, từ mượn hoặc tên riêng (ví dụ: 'AI', 'marketing', 'B2B', 'DNA', 'API', 'slide', 'CEO') đang xuất hiện trong câu đó.
-
-QUY TẮC BẮT BUỘC:
-1. Chỉ trích xuất các từ hoặc cụm từ viết bằng tiếng Anh có mặt trong câu tiếng Việt đầu vào.
-2. Không trích xuất các từ tiếng Việt hoặc từ đã được dịch sang tiếng Việt.
-3. Các từ tiếng Anh trích xuất phải được đưa vào danh sách 'english_words'. Nếu không có từ tiếng Anh nào, hãy trả về danh sách rỗng [].
-"""
+def normalize_numbers_to_text(text: str) -> str:
+    """Chuyển đổi số thành chữ tiếng Việt để tránh lệch timeline TTS."""
+    text = text.replace("%", " phần trăm")
+    def num_to_vi(match):
+        num_str = match.group()
+        if not num_str.isdigit(): return num_str
+        n = int(num_str)
+        units = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"]
+        if n < 10: return units[n]
+        if n < 100:
+            tens, ones = n // 10, n % 10
+            res = (units[tens] + " mươi") if tens > 1 else "mười"
+            if ones == 1 and tens > 1: res += " mốt"
+            elif ones == 5 and tens > 0: res += " lăm"
+            elif ones > 0: res += " " + units[ones]
+            return res
+        if n < 1000:
+            hundreds, rem = n // 100, n % 100
+            res = units[hundreds] + " trăm"
+            if rem == 0: return res
+            if rem < 10: return res + " lẻ " + units[rem]
+            tens, ones = rem // 10, rem % 10
+            res += " " + ((units[tens] + " mươi") if tens > 1 else "mười")
+            if ones == 1 and tens > 1: res += " mốt"
+            elif ones == 5 and tens > 0: res += " lăm"
+            elif ones > 0: res += " " + units[ones]
+            return res
+        return num_str
+    return re.sub(r'\b\d+\b', num_to_vi, text)
 
 PHONETIC_SYSTEM_PROMPT = """Bạn là một chuyên gia ngôn ngữ học và dịch thuật chuyên nghiệp.
 Nhiệm vụ của bạn là phiên âm các từ/cụm từ tiếng Anh chuyên ngành sang cách đọc/phát âm bằng chữ tiếng Việt (chỉ dùng các âm đọc tiếng Việt thông dụng) để bộ đọc TTS tiếng Việt có thể phát âm chuẩn xác.
@@ -102,162 +166,144 @@ def has_leakage(text: str) -> bool:
         return True
     return False
 
-def translate_single_entry(entry, idx, total, context_text, llm) -> tuple:
-    """Dịch và trích xuất danh sách từ tiếng Anh sử dụng LangChain thông qua 2 bước LLM riêng biệt."""
-    allowed_sec = (entry.end_ms - entry.start_ms) / 1000.0
-    if allowed_sec <= 0:
-        allowed_sec = 0.5
-    max_chars = max(24, int(allowed_sec * 14))
-    
-    # Bước 1: Dịch thuật
-    system_prompt = TRANSLATE_SYSTEM_PROMPT.format(max_chars=max_chars)
+def translate_paragraph(paragraph_text: str, context_text: str, llm, tech_terms_str: str) -> str:
+    """Dịch một đoạn văn bản hoàn chỉnh sử dụng LangChain."""
+    system_prompt = PARAGRAPH_TRANSLATE_SYSTEM_PROMPT.format(tech_terms_str=tech_terms_str)
     translate_prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
-        ("human", """[Bối cảnh các câu thoại tiếng Anh phía trước (CHỈ DÙNG THAM KHẢO, TUYỆT ĐỐI KHÔNG DỊCH):]
+        ("human", """[Bối cảnh các đoạn phía trước (CHỈ DÙNG THAM KHẢO, KHÔNG DỊCH):]
 {context_text}
  
-[Câu thoại tiếng Anh mục tiêu cần dịch sang tiếng Việt:]
+[Đoạn văn tiếng Anh cần dịch sang tiếng Việt:]
 {target_text}
  
-Hãy dịch câu thoại mục tiêu trên sang tiếng Việt tự nhiên và trả về duy nhất chuỗi tiếng Việt đã dịch trong JSON.""")
+Hãy dịch đoạn văn trên sang tiếng Việt tự nhiên và trả về duy nhất chuỗi tiếng Việt đã dịch trong JSON.""")
     ])
     
     translation_chain = translate_prompt | llm.with_structured_output(TranslationResult)
     
     vietnamese_text = ""
-    # Thử dịch tối đa 2 lần nếu phát hiện rò rỉ ngôn ngữ khác
     for attempt in range(2):
         try:
             res = translation_chain.invoke({
                 "context_text": context_text if context_text else "[Bắt đầu video]",
-                "target_text": entry.text
+                "target_text": paragraph_text
             })
             vietnamese_text = res.translated_text
-            if not has_leakage(vietnamese_text) and vietnamese_text.strip():
-                break
+            if not has_leakage(vietnamese_text) and vietnamese_text.strip() and vietnamese_text.lower().strip() != paragraph_text.lower().strip():
+                return normalize_numbers_to_text(vietnamese_text)
             else:
-                logger.warning(f"⚠️ Phát hiện rò rỉ ngôn ngữ lạ ở câu {entry.index} (lần thử {attempt+1}): '{vietnamese_text}'. Đang dịch lại...")
+                logger.warning(f"Phát hiện rò rỉ hoặc dịch lỗi ở paragraph (lần thử {attempt+1}): '{vietnamese_text}'. Đang dịch lại...")
         except Exception as e:
-            logger.error(f"❌ Lỗi LangChain khi dịch dòng {entry.index} (lần thử {attempt+1}): {e}")
-            vietnamese_text = entry.text
+            logger.error(f"Lỗi LangChain khi dịch paragraph (lần thử {attempt+1}): {e}")
             
-    # Nếu dịch lỗi hoặc vẫn có lỗi rò rỉ, dùng prompt đơn giản bằng tiếng Anh để dịch lại (dịch thô dự phòng)
     if not vietnamese_text.strip() or has_leakage(vietnamese_text):
-        logger.warning(f"⚠️ Dịch JSON có rò rỉ ngôn ngữ ở câu {entry.index}. Chuyển sang prompt dịch thô dự phòng...")
+        logger.warning(f"Dịch JSON lỗi, chuyển sang dịch thô dự phòng...")
         try:
-            raw_prompt = f"Translate the following English sentence into simple, natural Vietnamese. Keep technical terms like 'vector database', 'LLM', 'RAG', 'agent', 'ChatGPT' as is in English. Output ONLY the Vietnamese translation and nothing else. Sentence to translate: '{entry.text}'"
+            raw_prompt = f"""Bạn là biên dịch viên phụ đề. Hãy dịch ĐOẠN VĂN tiếng Anh sau sang tiếng Việt tự nhiên nhất.
+Quy tắc:
+{TRANSLATION_RULES.replace('{tech_terms_str}', tech_terms_str)}
+6. CHỈ trả về bản dịch tiếng Việt, KHÔNG giải thích.
+
+Đoạn văn cần dịch: '{paragraph_text}'"""
             raw_res = llm.invoke(raw_prompt)
             raw_text = raw_res.content.strip()
-            # Loại bỏ ngoặc kép ở đầu và cuối nếu có
             raw_text = re.sub(r'^["\']|["\']$', '', raw_text).strip()
             
             if raw_text and not has_leakage(raw_text):
-                vietnamese_text = raw_text
-                logger.info(f"✅ Dịch thô dự phòng thành công câu {entry.index}: '{vietnamese_text}'")
+                return raw_text
         except Exception as e:
-            logger.error(f"❌ Lỗi dịch thô dự phòng câu {entry.index}: {e}")
+            logger.error(f"Lỗi dịch thô: {e}")
             
-    # Nếu vẫn lỗi, dùng câu gốc tiếng Anh làm fallback cuối cùng
-    if not vietnamese_text.strip() or has_leakage(vietnamese_text):
-        logger.warning(f"⚠️ Không thể loại bỏ lỗi rò rỉ ngôn ngữ ở câu {entry.index}. Dùng câu gốc tiếng Anh làm fallback.")
-        vietnamese_text = entry.text
-        
-    # Gióng hàng từ tiếng Anh
-    word_positions = extract_and_align_entry(entry, vietnamese_text, llm)
-    logger.info(f"✅ Đã dịch câu {entry.index} ({idx+1}/{total}): '{vietnamese_text}' | English terms: {[w['word'] for w in word_positions]}")
-    return entry.index, vietnamese_text, word_positions
-
-def translate_single_batch(batch_entries, context_text, llm) -> dict:
-    """
-    Dịch cả batch câu thoại cùng lúc sử dụng LangChain.
-    Trả về: dict[int, str] mapping index -> translated_text, hoặc None nếu thất bại/rò rỉ.
-    """
-    targets = [{"index": e.index, "text": e.text} for e in batch_entries]
-    target_list_str = json.dumps(targets, ensure_ascii=False, indent=2)
-    
-    batch_prompt = ChatPromptTemplate.from_messages([
-        ("system", BATCH_TRANSLATE_SYSTEM_PROMPT),
-        ("human", """[Bối cảnh các câu thoại tiếng Anh phía trước (CHỈ DÙNG THAM KHẢO, TUYỆT ĐỐI KHÔNG DỊCH):]
-{context_text}
-
-[Danh sách các câu thoại tiếng Anh mục tiêu cần dịch sang tiếng Việt:]
-{target_list_str}
-
-Hãy dịch toàn bộ danh sách câu thoại mục tiêu trên sang tiếng Việt tự nhiên và trả về cấu trúc JSON tương ứng với đúng số lượng phần tử và index.""")
-    ])
-    
-    batch_chain = batch_prompt | llm.with_structured_output(BatchTranslationResult)
-    
-    for attempt in range(2):
+    logger.warning("Dịch paragraph thô lỗi, chuyển sang dịch từng câu lẻ...")
+    sentences = re.split(r'(?<=[.!?])\s+', paragraph_text)
+    translated_sentences = []
+    for sentence in sentences:
+        if not sentence.strip():
+            continue
         try:
-            res = batch_chain.invoke({
-                "context_text": context_text if context_text else "[Bắt đầu video]",
-                "target_list_str": target_list_str
-            })
-            
-            temp_map = {}
-            has_error = False
-            for item in res.translations:
-                text = item.translated_text
-                # Check for leakage
-                if has_leakage(text):
-                    logger.warning(f"⚠️ Phát hiện rò rỉ ngôn ngữ lạ ở batch (lần thử {attempt+1}): '{text}'")
-                    has_error = True
-                    break
-                temp_map[item.index] = text
-                
-            # Kiểm tra xem có đủ câu dịch cho tất cả các index trong batch không
-            if not has_error and all(e.index in temp_map for e in batch_entries):
-                return temp_map
-        except Exception as e:
-            logger.error(f"❌ Lỗi LangChain khi dịch batch (lần thử {attempt+1}): {e}")
-            
-    return None
+            raw_prompt = f"""Bạn là biên dịch viên phụ đề. Hãy dịch CÂU tiếng Anh sau sang tiếng Việt tự nhiên nhất.
+Quy tắc:
+{TRANSLATION_RULES.replace('{tech_terms_str}', tech_terms_str)}
+6. Dịch dựa trên ngữ cảnh của Đoạn văn gốc: '{paragraph_text}'.
+7. CHỈ trả về bản dịch tiếng Việt, KHÔNG giải thích.
 
-def extract_and_align_entry(entry, vietnamese_text, llm) -> list:
-    """
-    Trích xuất các từ tiếng Anh chuyên ngành từ câu dịch và tính toán vị trí index.
-    """
-    # Bước 2: Trích xuất các từ tiếng Anh có trong câu dịch
-    extraction_prompt = ChatPromptTemplate.from_messages([
-        ("system", EXTRACTION_SYSTEM_PROMPT),
-        ("human", "Hãy trích xuất các từ tiếng Anh từ câu dịch sau:\n{vietnamese_text}")
-    ])
-    
-    extraction_chain = extraction_prompt | llm.with_structured_output(EnglishExtractionResult)
-    
-    extracted_words = []
-    try:
-        res_ext = extraction_chain.invoke({"vietnamese_text": vietnamese_text})
-        extracted_words = res_ext.english_words
-    except Exception as e:
-        logger.warning(f"⚠️ Không trích xuất được từ tiếng Anh của dòng {entry.index}: {e}")
+Câu cần dịch: '{sentence}'"""
+            raw_res = llm.invoke(raw_prompt)
+            raw_text = raw_res.content.strip()
+            raw_text = re.sub(r'^["\']|["\']$', '', raw_text).strip()
+            
+            if raw_text and not has_leakage(raw_text) and raw_text.lower() != sentence.lower():
+                translated_sentences.append(raw_text)
+            else:
+                logger.warning(f"Bỏ qua câu bị rò rỉ: '{sentence}'")
+        except Exception as e:
+            logger.warning(f"Lỗi khi dịch lẻ câu: {e}")
+            
+    if translated_sentences:
+        return normalize_numbers_to_text(" ".join(translated_sentences))
         
-    # Quét bổ sung bằng Python để tránh LLM bỏ sót từ
-    scanned_words = []
-    try:
-        orig_words = set(re.findall(r'\b[a-zA-Z]{3,}\b', entry.text.lower()))
-        for w in vietnamese_text.split():
-            clean_w = re.sub(r'[^a-zA-Z0-9]', '', w).lower()
-            if (clean_w in orig_words or any(clean_w in ow for ow in orig_words)) and len(clean_w) >= 3:
-                scanned_words.append(clean_w)
-    except Exception as e:
-        logger.warning(f"⚠️ Lỗi quét Python bổ sung cho dòng {entry.index}: {e}")
+    logger.warning("Dùng đoạn gốc tiếng Anh làm fallback cuối cùng.")
+    return normalize_numbers_to_text(paragraph_text)
+
+def split_translation_to_entries(translated_paragraph: str, original_entries: list) -> list:
+    """Tách bản dịch đoạn thành từng dòng theo tỷ lệ thời lượng."""
+    total_duration = sum(e.duration_ms for e in original_entries)
+    if total_duration == 0:
+        total_duration = 1
         
-    # Hợp nhất danh sách từ tiếng Anh
-    merged_words = list(set([w.lower().strip() for w in extracted_words] + scanned_words))
+    words = translated_paragraph.split()
+    total_words = len(words)
     
-    # Bước 3: Tính toán vị trí bằng Python
+    result = []
+    word_cursor = 0
+    for i, entry in enumerate(original_entries):
+        ratio = entry.duration_ms / total_duration
+        word_count = max(1, round(total_words * ratio))
+        
+        if i == len(original_entries) - 1:
+            chunk_words = words[word_cursor:]
+        else:
+            chunk_words = words[word_cursor:word_cursor + word_count]
+            
+        result.append(" ".join(chunk_words))
+        word_cursor += len(chunk_words)
+        
+    for i in range(len(result)):
+        if not result[i].strip():
+            result[i] = "-"
+            
+    return result
+
+def extract_and_align_entry(entry, vietnamese_text, all_terms) -> list:
+    """
+    Trích xuất các từ tiếng Anh chuyên ngành bằng Regex và tập từ khóa (không dùng LLM).
+    """
+    orig_words = set(re.findall(r'\b[a-zA-Z]{2,}\b', entry.text.lower()))
+    
+    # Tập hợp các từ tiếng Việt không dấu phổ biến để tránh nhận nhầm thành tiếng Anh
+    vietnamese_no_diacritics = {"ai", "la", "co", "ba", "ca", "da", "nha", "cha", "khi", "cho", "thu", "thi", "nho", "ho", "sau", "chi", "con", "lon", "nhi", "minh", "nam", "ly", "ma", "ra", "xa", "to", "no", "va", "tu", "ta"}
+    
     word_positions = []
     try:
         words_list = vietnamese_text.split()
         for pos, w in enumerate(words_list):
             clean_w = re.sub(r'[^a-zA-Z0-9]', '', w).lower()
-            # Chỉ khớp nếu từ gốc trong câu dịch là pure ASCII (để tránh khớp nhầm các từ tiếng Việt như 'vectơ')
-            if clean_w in merged_words and w.isascii():
+            if not clean_w: continue
+            
+            is_english = False
+            # Nếu từ này nằm trong danh sách keyword đã biết
+            if any(clean_w == t or clean_w in t.split() for t in all_terms):
+                is_english = True
+            # Hoặc nếu từ này rõ ràng là tiếng Anh (thuộc câu gốc) và không bị nhầm lẫn với tiếng Việt không dấu
+            elif clean_w in orig_words and clean_w not in vietnamese_no_diacritics and not clean_w.isnumeric():
+                if any(c in clean_w for c in 'fjwz') or len(clean_w) > 3:
+                    is_english = True
+                    
+            if is_english and w.isascii():
                 word_positions.append({"word": clean_w, "position": pos})
     except Exception as e:
-        logger.error(f"❌ Lỗi tính toán vị trí index cho dòng {entry.index}: {e}")
+        logger.error(f"Lỗi tính toán vị trí index cho dòng {entry.index}: {e}")
         
     return word_positions
 
@@ -287,7 +333,7 @@ def get_batch_transliterations_langchain(english_terms: list, model_name: str = 
         })
         return result.transliterations
     except Exception as e:
-        logger.error(f"❌ Lỗi LangChain khi phiên âm hàng loạt: {e}")
+        logger.error(f"Lỗi LangChain khi phiên âm hàng loạt: {e}")
     return {}
 
 def run(srt_en_path: str, context: dict, model_name: str = OLLAMA_MODEL_NAME, limit: int = None) -> str:
@@ -302,27 +348,35 @@ def run(srt_en_path: str, context: dict, model_name: str = OLLAMA_MODEL_NAME, li
         raise ValueError(f"Không phân tích được dòng phụ đề nào từ: {srt_en_path}")
         
     if limit is not None:
-        logger.info(f"⚠️ Giới hạn dịch thử nghiệm {limit} câu đầu tiên.")
+        logger.info(f"Giới hạn dịch thử nghiệm {limit} câu đầu tiên.")
         entries = entries[:limit]
         
     translated_entries = []
     metadata_records = {}
     total = len(entries)
+
+    # Tự động trích xuất các thuật ngữ chuyên ngành đa ngành từ kịch bản tiếng Anh
+    extracted_terms = extract_tech_terms(srt_en_path, model_name)
+    context_keywords = context.get("keywords", []) if isinstance(context, dict) else []
+    all_terms = set(extracted_terms) | set(context_keywords)
+    tech_terms_str = ", ".join([f"'{term}'" for term in sorted(all_terms)])
+    logger.info(f"Tổng hợp các thuật ngữ chuyên ngành đa ngành cần giữ nguyên tiếng Anh: {tech_terms_str}")
     
-    # Chia các câu thoại thành các batch kích thước 3
-    batch_size = 3
-    batches = []
-    for i in range(0, len(entries), batch_size):
-        batch_entries = entries[i : i + batch_size]
+    # Chia các câu thoại thành các đoạn (paragraphs), kích thước 5
+    group_size = 5
+    paragraphs = []
+    for i in range(0, len(entries), group_size):
+        group = entries[i : i + group_size]
         
-        # Ngữ cảnh gối đầu (Sliding Window Context): Lấy tối đa 2 câu thoại cuối của batch trước đó
+        # Ngữ cảnh gối đầu: Lấy đoạn trước đó
         context_list = []
-        if i >= 1:
-            prev_start = max(0, i - 2)
-            context_list = [entries[k].text for k in range(prev_start, i)]
+        if i >= group_size:
+            prev_start = max(0, i - group_size)
+            context_list = [e.text for e in entries[prev_start:i]]
             
-        context_text = " | ".join(context_list)
-        batches.append((batch_entries, context_text))
+        context_text = " ".join(context_list)
+        full_text = " ".join([e.text for e in group])
+        paragraphs.append((group, full_text, context_text))
         
     results_map = {}
     all_english_terms = set()
@@ -334,40 +388,32 @@ def run(srt_en_path: str, context: dict, model_name: str = OLLAMA_MODEL_NAME, li
         temperature=0.1
     )
     
-    def process_batch(batch_entries, context_text):
-        """Hàm xử lý một batch câu thoại: dịch batch -> fallback nếu lỗi -> trích xuất và gióng hàng."""
-        # 1. Dịch batch
-        batch_translation = translate_single_batch(batch_entries, context_text, llm)
+    def process_paragraph(group, full_text, context_text):
+        """Hàm xử lý một paragraph: dịch -> tách -> trích xuất và gióng hàng."""
+        translated_para = translate_paragraph(full_text, context_text, llm, tech_terms_str)
+        split_texts = split_translation_to_entries(translated_para, group)
         
         batch_results = []
-        for entry in batch_entries:
+        for i, entry in enumerate(group):
             global_idx = entries.index(entry)
+            vietnamese_text = split_texts[i]
             
-            vietnamese_text = None
-            if batch_translation:
-                vietnamese_text = batch_translation.get(entry.index)
-                
-            if not vietnamese_text or not vietnamese_text.strip():
-                # Chuyển sang dịch đơn lẻ dự phòng nếu batch dịch lỗi
-                logger.warning(f"⚠️ Dịch batch thất bại hoặc thiếu dòng cho index {entry.index}. Chuyển sang dịch đơn lẻ dự phòng.")
-                _, vietnamese_text, word_positions = translate_single_entry(entry, global_idx, total, context_text, llm)
-            else:
-                # Nếu dịch thành công, thực hiện trích xuất và căn chỉnh từ tiếng Anh
-                word_positions = extract_and_align_entry(entry, vietnamese_text, llm)
-                logger.info(f"✅ Đã dịch (Batch) câu {entry.index} ({global_idx+1}/{total}): '{vietnamese_text}' | English terms: {[w['word'] for w in word_positions]}")
-                
+            # Thực hiện trích xuất và căn chỉnh từ tiếng Anh cho từng dòng
+            word_positions = extract_and_align_entry(entry, vietnamese_text, all_terms)
+            logger.info(f"Đã dịch (Paragraph Split) câu {entry.index} ({global_idx+1}/{total}): '{vietnamese_text}' | English terms: {[w['word'] for w in word_positions]}")
+            
             batch_results.append((entry.index, vietnamese_text, word_positions))
         return batch_results
 
-    # Chạy tuần tự các batches với 1 worker để tránh deadlock kết nối Ollama
-    logger.info(f"🚀 Bắt đầu dịch {len(batches)} batches bằng mô hình {model_name}...")
+    # Chạy tuần tự các paragraphs với 1 worker để tránh deadlock kết nối Ollama
+    logger.info(f"Bắt đầu dịch {len(paragraphs)} paragraphs bằng mô hình {model_name}...")
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         futures = {
-            executor.submit(process_batch, b[0], b[1]): i
-            for i, b in enumerate(batches)
+            executor.submit(process_paragraph, p[0], p[1], p[2]): i
+            for i, p in enumerate(paragraphs)
         }
         for future in concurrent.futures.as_completed(futures):
-            batch_idx = futures[future]
+            para_idx = futures[future]
             try:
                 batch_results = future.result()
                 for idx, vietnamese_text, word_positions in batch_results:
@@ -377,15 +423,15 @@ def run(srt_en_path: str, context: dict, model_name: str = OLLAMA_MODEL_NAME, li
                         if clean_term and re.match(r'^[a-z0-9\s\-]+$', clean_term) and len(clean_term) >= 3:
                             all_english_terms.add(clean_term)
             except Exception as exc:
-                logger.error(f"❌ Batch {batch_idx} phát sinh lỗi nghiêm trọng: {exc}")
-                for entry in batches[batch_idx][0]:
+                logger.error(f"Paragraph {para_idx} phát sinh lỗi nghiêm trọng: {exc}")
+                for entry in paragraphs[para_idx][0]:
                     results_map[entry.index] = (entry.text, [])
                     
     # 2. Sinh phiên âm hàng loạt cho danh sách từ tiếng Anh bằng G2P + MOP
     english_list = list(all_english_terms)
-    logger.info(f"📚 Đang tạo phiên âm (G2P) cho {len(english_list)} thuật ngữ tiếng Anh: {english_list}")
+    logger.info(f"Đang tạo phiên âm (G2P) cho {len(english_list)} thuật ngữ tiếng Anh: {english_list}")
     transliterations_map = transliterate_batch(english_list)
-    logger.info(f"✅ Đã nhận được bản đồ phiên âm (G2P): {transliterations_map}")
+    logger.info(f"Đã nhận được bản đồ phiên âm (G2P): {transliterations_map}")
     
     # Chuẩn hóa khóa của bản đồ về chữ thường
     transliterations_map = {k.lower().strip(): v.strip() for k, v in transliterations_map.items()}
@@ -435,7 +481,7 @@ def run(srt_en_path: str, context: dict, model_name: str = OLLAMA_MODEL_NAME, li
     with open(metadata_path, 'w', encoding='utf-8') as f:
         json.dump(metadata_records, f, ensure_ascii=False, indent=2)
         
-    logger.info(f"✅ Đã ghi file metadata tiếng Việt tại: {metadata_path}")
+    logger.info(f"Đã ghi file metadata tiếng Việt tại: {metadata_path}")
     
     # Dọn dẹp
     clean_memory()

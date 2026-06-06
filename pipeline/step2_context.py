@@ -9,7 +9,7 @@ from config import OLLAMA_API_URL, OLLAMA_MODEL_NAME
 
 def get_rough_transcript(audio_path: str, duration_sec: int = 30) -> str:
     """Cắt 30s đầu audio và chạy Whisper-Tiny để lấy văn bản thô cực nhanh."""
-    logger.info(f"⏳ Đang trích xuất {duration_sec}s đầu để phân tích ngữ cảnh...")
+    logger.info(f"Đang trích xuất {duration_sec}s đầu để phân tích ngữ cảnh...")
     
     # 1. Cắt âm thanh
     audio = AudioSegment.from_wav(audio_path)
@@ -18,7 +18,7 @@ def get_rough_transcript(audio_path: str, duration_sec: int = 30) -> str:
     audio[:cut_ms].export(temp_cut_path, format="wav")
     
     # 2. Tải Whisper-Tiny chạy trên CPU để không chiếm VRAM GPU
-    logger.info("🤖 Đang nạp Whisper-Tiny trên CPU...")
+    logger.info("Đang nạp Whisper-Tiny trên CPU...")
     log_memory_usage("Dynamic Context - Trước khi nạp Tiny")
     
     model = WhisperModel("tiny", device="cpu", compute_type="int8")
@@ -27,7 +27,7 @@ def get_rough_transcript(audio_path: str, duration_sec: int = 30) -> str:
     text_segments = [seg.text for seg in segments]
     raw_text = " ".join(text_segments).strip()
     
-    logger.info(f"📝 Raw Text (30s đầu): {raw_text}")
+    logger.info(f"Raw Text (30s đầu): {raw_text}")
     
     # 3. Dọn dẹp Whisper model khỏi bộ nhớ ngay lập tức
     del model
@@ -39,7 +39,7 @@ def get_rough_transcript(audio_path: str, duration_sec: int = 30) -> str:
 
 def query_ollama_for_context(raw_text: str, model_name: str = OLLAMA_MODEL_NAME) -> dict:
     """Gửi raw text qua Ollama để nhận diện chủ đề và keywords."""
-    logger.info(f"🧠 Đang gửi yêu cầu đến Ollama {model_name} để trích xuất ngữ cảnh...")
+    logger.info(f"Đang gửi yêu cầu đến Ollama {model_name} để trích xuất ngữ cảnh...")
     
     system_prompt = (
         "Bạn là một chuyên gia phân tích video. Nhiệm vụ của bạn là đọc văn bản thô tiếng Anh (có thể bị sai chính tả) "
@@ -81,8 +81,8 @@ def query_ollama_for_context(raw_text: str, model_name: str = OLLAMA_MODEL_NAME)
         # Xử lý làm sạch keywords: chuyển về chữ thường
         keywords = [kw.lower().strip() for kw in keywords if kw.strip()]
         
-        logger.info(f"🎯 Kết quả nhận diện chủ đề: {topic}")
-        logger.info(f"🔑 Danh sách từ khóa chuyên ngành: {keywords}")
+        logger.info(f"Kết quả nhận diện chủ đề: {topic}")
+        logger.info(f"Danh sách từ khóa chuyên ngành: {keywords}")
         
         return {
             "topic": topic,
@@ -90,7 +90,7 @@ def query_ollama_for_context(raw_text: str, model_name: str = OLLAMA_MODEL_NAME)
             "keywords_str": ", ".join(keywords)
         }
     except Exception as e:
-        logger.error(f"❌ Lỗi khi gọi Ollama: {e}")
+        logger.error(f"Lỗi khi gọi Ollama: {e}")
         # Fallback an toàn
         return {
             "topic": "Chung",
@@ -104,7 +104,7 @@ def run(audio_path: str, model_name: str = OLLAMA_MODEL_NAME) -> dict:
     
     raw_text = get_rough_transcript(audio_path, duration_sec=30)
     if not raw_text:
-        logger.warning("⚠️ Không nhận dạng được âm thanh nào trong 30s đầu. Dùng ngữ cảnh mặc định.")
+        logger.warning("Không nhận dạng được âm thanh nào trong 30s đầu. Dùng ngữ cảnh mặc định.")
         return {
             "topic": "Chung",
             "keywords": [],

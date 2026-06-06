@@ -26,7 +26,7 @@ def log_memory_usage(stage_name="General"):
 
 def clean_memory():
     """Giải phóng RAM và VRAM chủ động."""
-    logger.info("🧹 Bắt đầu dọn dẹp bộ nhớ (GC & PyTorch Cache)...")
+    logger.info("Bắt đầu dọn dẹp bộ nhớ (GC & PyTorch Cache)...")
     gc.collect()
     
     if HAS_TORCH and torch.cuda.is_available():

@@ -26,11 +26,11 @@ def run(video_path: str, audio_vi_path: str, srt_vi_path: str, hardsub: bool = F
     rel_audio = get_relative_path(audio_vi_path)
     rel_output = get_relative_path(output_path)
     
-    logger.info(f"🎥 File video không tiếng: {rel_video}")
-    logger.info(f"🔊 File audio tiếng Việt: {rel_audio}")
+    logger.info(f"File video không tiếng: {rel_video}")
+    logger.info(f"File audio tiếng Việt: {rel_audio}")
     
     # Định nghĩa câu lệnh FFmpeg chỉ ghép tiếng Việt vào video (không hiện phụ đề)
-    logger.info("🎬 Đang lồng tiếng Việt vào video (không kèm phụ đề)...")
+    logger.info("Đang lồng tiếng Việt vào video (không kèm phụ đề)...")
     cmd = [
         "ffmpeg", "-y",
         "-i", rel_video,
@@ -46,7 +46,7 @@ def run(video_path: str, audio_vi_path: str, srt_vi_path: str, hardsub: bool = F
         
     try:
         # Chạy lệnh FFmpeg ở thư mục BASE_DIR để đường dẫn tương đối hoạt động chính xác
-        logger.info(f"⚙️ Đang thực thi lệnh FFmpeg: {' '.join(cmd)}")
+        logger.info(f"Đang thực thi lệnh FFmpeg: {' '.join(cmd)}")
         result = subprocess.run(
             cmd,
             cwd=BASE_DIR,
@@ -54,9 +54,9 @@ def run(video_path: str, audio_vi_path: str, srt_vi_path: str, hardsub: bool = F
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
-        logger.info(f"🎉 Xuất video hoàn chỉnh thành công tại: {output_path}")
+        logger.info(f"Xuất video hoàn chỉnh thành công tại: {output_path}")
         return output_path
     except subprocess.CalledProcessError as e:
         error_msg = e.stderr.decode("utf-8", errors="ignore")
-        logger.error(f"❌ Lỗi ghép video bằng FFmpeg: {error_msg}")
+        logger.error(f"Lỗi ghép video bằng FFmpeg: {error_msg}")
         raise RuntimeError(f"FFmpeg Muxing error: {error_msg}")

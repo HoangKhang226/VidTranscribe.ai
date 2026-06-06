@@ -9,12 +9,12 @@ import config
 
 def start_api_server():
     """Khởi động server backend FastAPI."""
-    logger.info(f"🔌 Đang khởi động Backend API tại http://{config.API_HOST}:{config.API_PORT} ...")
+    logger.info(f"Đang khởi động Backend API tại http://{config.API_HOST}:{config.API_PORT} ...")
     uvicorn.run("api:app", host=config.API_HOST, port=config.API_PORT, reload=False)
 
 def start_web_ui():
     """Khởi động giao diện Web UI Gradio."""
-    logger.info(f"🌐 Đang khởi động Web UI Gradio tại http://127.0.0.1:{config.GRADIO_PORT} ...")
+    logger.info(f"Đang khởi động Web UI Gradio tại http://127.0.0.1:{config.GRADIO_PORT} ...")
     from app import demo
     demo.launch(server_name="127.0.0.1", server_port=config.GRADIO_PORT)
 
@@ -66,22 +66,23 @@ def main():
     
     if args.mode == "cli":
         if not args.source:
-            logger.error("❌ Chế độ CLI yêu cầu tham số --source (URL YouTube hoặc file video).")
+            logger.error("Chế độ CLI yêu cầu tham số --source (URL YouTube hoặc file video).")
             sys.exit(1)
             
-        is_url = args.source.startswith("http://") or args.source.startswith("https://")
-        
+        if args.source.startswith("http://") or args.source.startswith("https://"):
+            logger.error("Hệ thống chỉ chấp nhận tệp video local, không hỗ trợ tải từ URL/YouTube.")
+            sys.exit(1)
+            
         try:
             orchestrator = PipelineOrchestrator()
             final_video_path = orchestrator.run_pipeline(
                 source=args.source,
-                is_url=is_url,
                 hardsub=args.hardsub,
                 ollama_model=args.model
             )
-            logger.info(f"🏁 Đã hoàn thành xử lý. Video đầu ra lưu tại: {final_video_path}")
+            logger.info(f"Đã hoàn thành xử lý. Video đầu ra lưu tại: {final_video_path}")
         except Exception as e:
-            logger.error(f"💥 Đã xảy ra lỗi trong quá trình thực thi: {e}")
+            logger.error(f"Đã xảy ra lỗi trong quá trình thực thi: {e}")
             sys.exit(1)
             
     elif args.mode == "api":

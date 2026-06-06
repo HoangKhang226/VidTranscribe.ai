@@ -25,9 +25,9 @@ class PipelineOrchestrator:
         """Cập nhật tiến độ của Pipeline."""
         self.state["current_step"] = step_name
         self.state["progress"] = progress
-        logger.info(f"🔄 Progress: {progress*100:.0f}% | Current Step: {step_name}")
+        logger.info(f"Progress: {progress*100:.0f}% | Current Step: {step_name}")
 
-    def run_pipeline(self, source: str, is_url: bool = False, hardsub: bool = True, ollama_model: str = None) -> str:
+    def run_pipeline(self, source: str, hardsub: bool = True, ollama_model: str = None) -> str:
         """
         Chạy tuần tự 7 bước lồng tiếng phụ đề AI.
         Đảm bảo dọn dẹp RAM/VRAM sau mỗi bước.
@@ -37,13 +37,13 @@ class PipelineOrchestrator:
         self.state["error"] = None
         self.state["start_time"] = time.time()
         
-        logger.info("🚀 BẮT ĐẦU CHẠY PIPELINE LỒNG TIẾNG VÀ DỊCH THUẬT AI...")
+        logger.info("BẮT ĐẦU CHẠY PIPELINE LỒNG TIẾNG VÀ DỊCH THUẬT AI...")
         log_memory_usage("Orchestrator - Khởi tạo")
         
         try:
             # Bước 1: Ingestion
             self.update_progress("Bước 1: Ingestion (Tải/Phân tách Video & Audio)", 0.1)
-            audio_orig, video_mute = step1_ingestion.run(source, is_url)
+            audio_orig, video_mute = step1_ingestion.run(source)
             self.state["results"]["audio_original"] = audio_orig
             self.state["results"]["video_no_audio"] = video_mute
             clean_memory()
@@ -82,13 +82,13 @@ class PipelineOrchestrator:
             self.state["status"] = "completed"
             self.state["progress"] = 1.0
             self.state["elapsed_time"] = time.time() - self.state["start_time"]
-            logger.info(f"🏆 PIPELINE HOÀN TẤT THÀNH CÔNG SAU {self.state['elapsed_time']:.2f} GIÂY!")
+            logger.info(f"PIPELINE HOÀN TẤT THÀNH CÔNG SAU {self.state['elapsed_time']:.2f} GIÂY!")
             return final_video
             
         except Exception as e:
             self.state["status"] = "failed"
             self.state["error"] = str(e)
-            logger.error(f"❌ PIPELINE BỊ LỖI VÀ DỪNG LẠI: {e}")
+            logger.error(f"PIPELINE BỊ LỖI VÀ DỪNG LẠI: {e}")
             clean_memory()
             raise e
             

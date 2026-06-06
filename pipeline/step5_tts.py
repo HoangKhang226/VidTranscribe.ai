@@ -64,9 +64,28 @@ async def synthesize_all_tts(entries, metadata, voice, temp_dir) -> dict:
         # Làm sạch chuỗi trước khi gửi tới Edge-TTS
         tts_text = clean_tts_text(tts_text)
             
-        allowed_ms = entry.end_ms - entry.start_ms
-        if allowed_ms <= 0:
-            allowed_ms = 500
+        # Tính toán khả năng mượn thời gian (Cheat gaps)
+        prev_entry = entries[i-1] if i > 0 else None
+        next_entry = entries[i+1] if i < total - 1 else None
+        
+        SAFE_GAP = 100 # Giữ ít nhất 100ms an toàn giữa các câu
+        MAX_BORROW = 1500 # Mượn tối đa 1.5s mỗi đầu
+        
+        if prev_entry:
+            gap_left = entry.start_ms - prev_entry.end_ms
+        else:
+            gap_left = entry.start_ms
+        usable_left = max(0, min((gap_left - SAFE_GAP) / 2, MAX_BORROW))
+        
+        if next_entry:
+            gap_right = next_entry.start_ms - entry.end_ms
+        else:
+            gap_right = MAX_BORROW
+        usable_right = max(0, min((gap_right - SAFE_GAP) / 2, MAX_BORROW))
+        
+        orig_allowed = entry.end_ms - entry.start_ms
+        if orig_allowed <= 0:
+            orig_allowed = 500
             
         # Thử sinh tiếng
         speech = None
@@ -79,7 +98,7 @@ async def synthesize_all_tts(entries, metadata, voice, temp_dir) -> dict:
                     speech = AudioSegment.from_file(temp_path, format="mp3")
                     break
             except Exception as e:
-                logger.warning(f"⚠️ Thử Edge-TTS lần {attempt+1}/{max_retries} thất bại cho '{tts_text[:30]}...'. Chi tiết: {e}")
+                logger.warning(f"Thử Edge-TTS lần {attempt+1}/{max_retries} thất bại cho '{tts_text[:30]}...'. Chi tiết: {e}")
                 if attempt < max_retries - 1:
                     # Exponential backoff khi bị chặn
                     await asyncio.sleep(2 * (attempt + 1))
@@ -95,13 +114,29 @@ async def synthesize_all_tts(entries, metadata, voice, temp_dir) -> dict:
             
         actual_ms = len(speech)
         
-        # Bước B: Xử lý khớp thời gian
+        # Bước B: Xử lý khớp thời gian với cơ chế Ăn Gian (Cheating Gaps)
+        if actual_ms <= orig_allowed:
+            allowed_ms = orig_allowed
+            overlay_start = entry.start_ms
+        else:
+            extra_needed = actual_ms - orig_allowed
+            # Ưu tiên mượn gap phía sau (nói lố sau khi sub kết thúc tự nhiên hơn)
+            borrow_right = min(usable_right, extra_needed)
+            remain = extra_needed - borrow_right
+            borrow_left = min(usable_left, remain)
+            
+            allowed_ms = orig_allowed + borrow_left + borrow_right
+            overlay_start = entry.start_ms - borrow_left
+            
+            if borrow_right > 0 or borrow_left > 0:
+                logger.info(f"Câu {entry.index}: Ăn gian khoảng trống (Trái: {int(borrow_left)}ms, Phải: {int(borrow_right)}ms) để giảm ép tốc độ.")
+        
         if actual_ms > allowed_ms:
             speed_factor = actual_ms / allowed_ms
             speed_factor = min(speed_factor, 1.8)
             rate_pct = int((speed_factor - 1.0) * 100)
             
-            logger.info(f"⚡ Cần tăng tốc câu {entry.index} ({actual_ms}ms > {allowed_ms}ms, {speed_factor:.2f}x). Sinh lại với rate=+{rate_pct}%...")
+            logger.info(f"Cần tăng tốc câu {entry.index} ({actual_ms}ms > {int(allowed_ms)}ms, {speed_factor:.2f}x). Sinh lại với rate=+{rate_pct}%...")
             
             # Sinh lại với tốc độ đã tăng
             for attempt in range(max_retries):
@@ -112,7 +147,7 @@ async def synthesize_all_tts(entries, metadata, voice, temp_dir) -> dict:
                         speech = AudioSegment.from_file(temp_path, format="mp3")
                         break
                 except Exception as e:
-                    logger.warning(f"⚠️ Thử Edge-TTS với rate=+{rate_pct}% lần {attempt+1}/{max_retries} thất bại. Chi tiết: {e}")
+                    logger.warning(f"Thử Edge-TTS với rate=+{rate_pct}% lần {attempt+1}/{max_retries} thất bại. Chi tiết: {e}")
                     if attempt < max_retries - 1:
                         # Exponential backoff khi bị chặn
                         await asyncio.sleep(2 * (attempt + 1))
@@ -125,16 +160,19 @@ async def synthesize_all_tts(entries, metadata, voice, temp_dir) -> dict:
                             
             if speech is None or len(speech) == 0:
                 speech = AudioSegment.silent(duration=1000)
-            speech = speech[:allowed_ms]
+            speech = speech[:int(allowed_ms)]
         else:
-            padding = AudioSegment.silent(duration=(allowed_ms - actual_ms))
+            padding = AudioSegment.silent(duration=int(allowed_ms - actual_ms))
             speech = speech + padding
             
-        speech_segments[entry.index] = speech
+        speech_segments[entry.index] = {
+            "speech": speech,
+            "overlay_start": int(overlay_start)
+        }
         
         # Log tiến trình nhỏ
         if (i + 1) % 15 == 0 or (i + 1) == total:
-            logger.info(f"⏳ Đã lồng tiếng: {i + 1}/{total} câu...")
+            logger.info(f"Đã lồng tiếng: {i + 1}/{total} câu...")
             
         # Khoảng nghỉ 1.5s để tránh bị rate limit từ Microsoft
         await asyncio.sleep(1.5)
@@ -152,7 +190,7 @@ def run(srt_vi_path: str, audio_original_path: str) -> str:
     # 1. Tính toán tổng thời lượng video gốc
     original_audio = AudioSegment.from_wav(audio_original_path)
     total_duration_ms = len(original_audio)
-    logger.info(f"⏱️ Tổng thời lượng âm thanh gốc: {total_duration_ms / 1000:.2f} giây")
+    logger.info(f"Tổng thời lượng âm thanh gốc: {total_duration_ms / 1000:.2f} giây")
     
     # Khởi tạo background audio tĩnh
     final_audio = AudioSegment.silent(duration=total_duration_ms)
@@ -168,15 +206,15 @@ def run(srt_vi_path: str, audio_original_path: str) -> str:
         try:
             with open(metadata_path, 'r', encoding='utf-8') as f:
                 metadata = json.load(f)
-            logger.info(f"📂 Đã tải file metadata phụ đề thành công: {metadata_path}")
+            logger.info(f"Đã tải file metadata phụ đề thành công: {metadata_path}")
         except Exception as e:
-            logger.warning(f"⚠️ Không load được metadata JSON: {e}")
+            logger.warning(f"Không load được metadata JSON: {e}")
             
     temp_dir = os.path.join(AUDIO_DIR, "temp_segments")
     os.makedirs(temp_dir, exist_ok=True)
     
     total = len(entries)
-    logger.info(f"🗣️ Đang thực hiện lồng tiếng cho {total} câu phụ đề...")
+    logger.info(f"Đang thực hiện lồng tiếng cho {total} câu phụ đề...")
     
     # Chạy hàm async để sinh toàn bộ tiếng Việt
     try:
@@ -190,18 +228,21 @@ def run(srt_vi_path: str, audio_original_path: str) -> str:
             synthesize_all_tts(entries, metadata, EDGE_TTS_VOICE, temp_dir)
         )
     except Exception as e:
-        logger.error(f"❌ Lỗi nghiêm trọng khi tổng hợp TTS: {e}")
-        speech_segments = {entry.index: AudioSegment.silent(duration=entry.end_ms - entry.start_ms) for entry in entries}
+        logger.error(f"Lỗi nghiêm trọng khi tổng hợp TTS: {e}")
+        speech_segments = {entry.index: {"speech": AudioSegment.silent(duration=entry.end_ms - entry.start_ms), "overlay_start": entry.start_ms} for entry in entries}
         
     for entry in entries:
-        speech = speech_segments.get(entry.index)
-        if speech:
-            final_audio = final_audio.overlay(speech, position=entry.start_ms)
+        seg_data = speech_segments.get(entry.index)
+        if seg_data and isinstance(seg_data, dict):
+            speech = seg_data.get("speech")
+            pos = seg_data.get("overlay_start", entry.start_ms)
+            if speech:
+                final_audio = final_audio.overlay(speech, position=pos)
             
     # Ghi file audio tiếng Việt hoàn chỉnh
     audio_vi_path = os.path.join(AUDIO_DIR, "audio_vietnamese.wav")
     final_audio.export(audio_vi_path, format="wav")
-    logger.info(f"🎉 Đã xuất bản file âm thanh tiếng Việt hoàn chỉnh: {audio_vi_path}")
+    logger.info(f"Đã xuất bản file âm thanh tiếng Việt hoàn chỉnh: {audio_vi_path}")
     
     # Dọn dẹp thư mục temp
     try:

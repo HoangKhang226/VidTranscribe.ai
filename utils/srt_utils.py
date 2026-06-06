@@ -85,7 +85,7 @@ def sanitize_srt_overlap(srt_path: str, min_gap_ms: int = 100) -> str:
     Nếu mốc start_ms của câu sau nhỏ hơn hoặc trùng khít với end_ms của câu trước (< min_gap_ms),
     tự động điều chỉnh lùi/nhích mốc thời gian để tránh chồng lấp.
     """
-    logger.info(f"🔍 Đang kiểm tra và khử overlap trong file phụ đề: {srt_path}")
+    logger.info(f"Đang kiểm tra và khử overlap trong file phụ đề: {srt_path}")
     entries = parse_srt(srt_path)
     if not entries:
         return srt_path
@@ -112,9 +112,9 @@ def sanitize_srt_overlap(srt_path: str, min_gap_ms: int = 100) -> str:
                 adjusted_count += 1
 
     if adjusted_count > 0:
-        logger.info(f"🩹 Đã tự động vá và làm sạch {adjusted_count} điểm trùng lặp phụ đề để tránh Ghosting Subtitles.")
+        logger.info(f"Đã tự động vá và làm sạch {adjusted_count} điểm trùng lặp phụ đề để tránh Ghosting Subtitles.")
         write_srt(entries, srt_path)
     else:
-        logger.info("✅ Phụ đề sạch, không phát hiện lỗi trùng lặp.")
+        logger.info("Phụ đề sạch, không phát hiện lỗi trùng lặp.")
         
     return srt_path

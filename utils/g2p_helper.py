@@ -60,9 +60,9 @@ def _load_cache():
         try:
             with open(CACHE_FILE_PATH, "r", encoding="utf-8") as f:
                 _cache = json.load(f)
-            logger.info(f"💾 Loaded {len(_cache)} entries from phonetic cache: {CACHE_FILE_PATH}")
+            logger.info(f"Loaded {len(_cache)} entries from phonetic cache: {CACHE_FILE_PATH}")
         except Exception as e:
-            logger.warning(f"⚠️ Failed to load phonetic cache: {e}. Starting fresh.")
+            logger.warning(f"Failed to load phonetic cache: {e}. Starting fresh.")
             _cache = {}
     else:
         _cache = {}
@@ -77,7 +77,7 @@ def _save_cache():
         with open(CACHE_FILE_PATH, "w", encoding="utf-8") as f:
             json.dump(_cache, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        logger.error(f"❌ Failed to save phonetic cache: {e}")
+        logger.error(f"Failed to save phonetic cache: {e}")
 
 def clean_phoneme(ph: str) -> tuple:
     """Bóc tách stress digit (0, 1, 2) ra khỏi phoneme."""

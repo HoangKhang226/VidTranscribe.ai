@@ -4,7 +4,6 @@ from fastapi import FastAPI, BackgroundTasks, UploadFile, File, Form, HTTPExcept
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from pipeline.orchestrator import PipelineOrchestrator
 from config import OUTPUT_DIR, DOWNLOADS_DIR, API_HOST, API_PORT
 from utils.logger import logger
@@ -27,45 +26,16 @@ app.add_middleware(
 # Lưu trữ các task lồng tiếng đang chạy (In-memory)
 tasks = {}
 
-class TranscribeUrlRequest(BaseModel):
-    url: str
-    hardsub: bool = True
-    model: str = "qwen2.5:3b-instruct-q4_K_M"
-
 # Mount thư mục output làm Static Files để tải file trực tiếp qua URL
 app.mount("/static", StaticFiles(directory=OUTPUT_DIR), name="static")
 
-def run_pipeline_task(task_id: str, source: str, is_url: bool, hardsub: bool, model_name: str):
+def run_pipeline_task(task_id: str, source: str, hardsub: bool, model_name: str):
     """Hàm chạy ngầm trong Background Thread."""
     orchestrator = tasks[task_id]["orchestrator"]
     try:
-        orchestrator.run_pipeline(source, is_url=is_url, hardsub=hardsub, ollama_model=model_name)
+        orchestrator.run_pipeline(source, hardsub=hardsub, ollama_model=model_name)
     except Exception as e:
-        logger.error(f"❌ Lỗi chạy Background Task {task_id}: {e}")
-
-@app.post("/api/v1/transcribe/url")
-async def transcribe_url(request: TranscribeUrlRequest, background_tasks: BackgroundTasks):
-    """API Nhận URL Youtube để xử lý lồng tiếng."""
-    if not request.url.startswith("http"):
-        raise HTTPException(status_code=400, detail="URL không hợp lệ. Phải bắt đầu bằng http/https.")
-        
-    task_id = str(uuid.uuid4())
-    orchestrator = PipelineOrchestrator()
-    
-    tasks[task_id] = {
-        "orchestrator": orchestrator,
-        "source": request.url,
-        "is_url": True
-    }
-    
-    # Đưa vào Background Tasks để tránh block request API
-    background_tasks.add_task(run_pipeline_task, task_id, request.url, True, request.hardsub, request.model)
-    
-    return {
-        "message": "Task lồng tiếng đã được xếp hàng.",
-        "task_id": task_id,
-        "status": "processing"
-    }
+        logger.error(f"Lỗi chạy Background Task {task_id}: {e}")
 
 @app.post("/api/v1/transcribe/upload")
 async def transcribe_upload(
@@ -95,12 +65,11 @@ async def transcribe_upload(
     orchestrator = PipelineOrchestrator()
     tasks[task_id] = {
         "orchestrator": orchestrator,
-        "source": saved_path,
-        "is_url": False
+        "source": saved_path
     }
     
     # Khởi chạy pipeline ngầm
-    background_tasks.add_task(run_pipeline_task, task_id, saved_path, False, hardsub, model)
+    background_tasks.add_task(run_pipeline_task, task_id, saved_path, hardsub, model)
     
     return {
         "message": "Task upload đã được xếp hàng.",

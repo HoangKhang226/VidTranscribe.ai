@@ -17,10 +17,10 @@ def run(audio_path: str, context: dict) -> str:
     initial_prompt = ""
     if context.get("keywords"):
         initial_prompt = "The terminology used in this video includes: " + ", ".join(context["keywords"]) + "."
-        logger.info(f"💡 Dùng Initial Prompt hướng dẫn Whisper: '{initial_prompt}'")
+        logger.info(f"Dùng Initial Prompt hướng dẫn Whisper: '{initial_prompt}'")
     
     # 2. Khởi tạo mô hình
-    logger.info(f"🤖 Đang nạp mô hình Whisper-{WHISPER_MODEL_SIZE} ({WHISPER_DEVICE}, {WHISPER_COMPUTE_TYPE})...")
+    logger.info(f"Đang nạp mô hình Whisper-{WHISPER_MODEL_SIZE} ({WHISPER_DEVICE}, {WHISPER_COMPUTE_TYPE})...")
     model = WhisperModel(
         WHISPER_MODEL_SIZE,
         device=WHISPER_DEVICE,
@@ -29,7 +29,7 @@ def run(audio_path: str, context: dict) -> str:
     )
     
     # 3. Tiến hành nhận diện âm thanh
-    logger.info("🎙️ Đang bóc băng toàn bộ âm thanh video...")
+    logger.info("Đang bóc băng toàn bộ âm thanh video...")
     segments, info = model.transcribe(
         audio_path,
         beam_size=5,
@@ -49,7 +49,7 @@ def run(audio_path: str, context: dict) -> str:
         if text:
             entries.append(SRTEntry(index, start_ms, end_ms, text))
             
-    logger.info(f"✅ Bóc băng hoàn tất. Tổng số câu thoại: {len(entries)}")
+    logger.info(f"Bóc băng hoàn tất. Tổng số câu thoại: {len(entries)}")
     
     # 5. Ghi file SRT tiếng Anh thô
     srt_output_path = os.path.join(SUBTITLES_DIR, "subtitles_en.srt")

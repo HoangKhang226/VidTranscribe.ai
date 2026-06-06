@@ -48,15 +48,14 @@ h1, h2 {
 def process_video_gradio(upload_file, ollama_model):
     """Hàm wrapper cho Gradio, thực thi pipeline trên thread phụ và poll tiến trình."""
     if upload_file is None:
-        yield 0.0, "⚠️ Vui lòng upload file video!", None, None
+        yield 0.0, "Vui lòng upload file video!", None, None
         return
 
     orchestrator = PipelineOrchestrator()
     
-    # Khởi chạy pipeline trên một Thread phụ
     thread = threading.Thread(
         target=orchestrator.run_pipeline,
-        args=(upload_file, False, False, ollama_model)
+        args=(upload_file, False, ollama_model)
     )
     thread.start()
     
@@ -66,7 +65,7 @@ def process_video_gradio(upload_file, ollama_model):
         progress = status.get("progress", 0.0)
         current_step = status.get("current_step", "Đang xử lý...")
         
-        yield progress, f"🔄 {current_step}", None, None
+        yield progress, f"{current_step}", None, None
         time.sleep(0.5)
         
     # Lấy trạng thái cuối cùng sau khi luồng kết thúc
@@ -79,15 +78,15 @@ def process_video_gradio(upload_file, ollama_model):
         if final_video and os.path.exists(final_video):
             yield (
                 1.0,
-                f"🏆 Hoàn thành lồng tiếng thành công trong {status.get('elapsed_time', 0.0):.1f}s!",
+                f"Hoàn thành lồng tiếng thành công trong {status.get('elapsed_time', 0.0):.1f}s!",
                 final_video,
                 srt_vi
             )
         else:
-            yield 0.0, "❌ Lỗi: Pipeline báo thành công nhưng không tìm thấy file đầu ra.", None, None
+            yield 0.0, "Lỗi: Pipeline báo thành công nhưng không tìm thấy file đầu ra.", None, None
     else:
         error_msg = status.get("error", "Lỗi không xác định")
-        yield 0.0, f"❌ Pipeline thất bại: {error_msg}", None, None
+        yield 0.0, f"Pipeline thất bại: {error_msg}", None, None
 
 # Xây dựng giao diện UI Gradio
 with gr.Blocks(theme=gr.themes.Default(primary_hue="sky"), css=custom_css, title="VidTranscribe.ai") as demo:
@@ -98,7 +97,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue="sky"), css=custom_css, title
         with gr.Column(scale=8):
             gr.Markdown(
                 """
-                # 🎙️ VidTranscribe.ai
+                # VidTranscribe.ai
                 ### Hệ thống lồng tiếng AI thông minh gối đầu ngữ cảnh.
                 *Tối ưu hóa chạy êm mượt trên RTX 2050 (4GB VRAM) bằng cơ chế Sequential Model Loading.*
                 """
@@ -109,14 +108,14 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue="sky"), css=custom_css, title
     with gr.Row():
         # Cột trái - Nhập dữ liệu đầu vào
         with gr.Column(scale=5, elem_classes=["card-glass"]):
-            gr.Markdown("### 📥 1. Đầu vào Video")
+            gr.Markdown("### 1. Đầu vào Video")
             
             upload_file = gr.File(
                 label="Tải lên Video Local (.mp4, .mkv, .mov)",
                 file_types=["video"]
             )
             
-            gr.Markdown("### ⚙️ 2. Cấu hình & Tùy chọn")
+            gr.Markdown("### 2. Cấu hình & Tùy chọn")
             
             ollama_model = gr.Dropdown(
                 label="Mô hình LLM dịch thuật (Ollama)",
@@ -125,11 +124,11 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue="sky"), css=custom_css, title
                 info="Mô hình 7B được khuyến nghị để dịch và phiên âm tối ưu nhất."
             )
             
-            submit_btn = gr.Button("🚀 Bắt đầu dịch & Lồng tiếng", elem_classes=["primary-btn"])
+            submit_btn = gr.Button("Bắt đầu dịch & Lồng tiếng", elem_classes=["primary-btn"])
             
         # Cột phải - Trạng thái và Kết quả đầu ra
         with gr.Column(scale=5, elem_classes=["card-glass"]):
-            gr.Markdown("### 📊 3. Tiến trình xử lý")
+            gr.Markdown("### 3. Tiến trình xử lý")
             
             progress_bar = gr.Slider(
                 label="Tiến độ",
@@ -145,7 +144,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue="sky"), css=custom_css, title
                 interactive=False
             )
             
-            gr.Markdown("### 🎬 4. Kết quả đầu ra")
+            gr.Markdown("### 4. Kết quả đầu ra")
             output_video = gr.Video(
                 label="Video Lồng tiếng Tiếng Việt (Không kèm phụ đề)",
                 interactive=False

@@ -33,7 +33,7 @@ if sys.platform == "win32":
                 unique_paths.append(p_clean)
         os.environ["PATH"] = ";".join(unique_paths)
     except Exception as e:
-        sys.stderr.write(f"⚠️ Không thể tự động cập nhật PATH từ Registry: {e}\n")
+        sys.stderr.write(f"Không thể tự động cập nhật PATH từ Registry: {e}\n")
 
 # Đường dẫn thư mục gốc dự án
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
