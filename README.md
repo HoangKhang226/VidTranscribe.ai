@@ -82,11 +82,11 @@ python main.py --mode cli --source "video.mp4" --model "qwen2.5:7b-instruct-q4_K
 
 ```text
 .
-├── api.py                 # FastAPI Backend Service
-├── app.py                 # Gradio Frontend Dashboard
 ├── main.py                # Central Pipeline Orchestrator
 ├── output/                # Stored Output Data & Subtitles
 └── src/                   # Source Code
+    ├── api.py             # FastAPI Backend Service
+    ├── app.py             # Gradio Frontend Dashboard
     ├── config.py          # Centralized Configuration
     ├── pipeline/          # The 6-Stage Modular Logic
     │   ├── step1_ingestion.py

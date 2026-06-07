@@ -5,17 +5,17 @@ import uvicorn
 from src.utils.logger import logger
 from src.utils.memory import clean_memory
 from src.pipeline.orchestrator import PipelineOrchestrator
-import src.config
+from src import config
 
 def start_api_server():
     """Khởi động server backend FastAPI."""
     logger.info(f"Đang khởi động Backend API tại http://{config.API_HOST}:{config.API_PORT} ...")
-    uvicorn.run("api:app", host=config.API_HOST, port=config.API_PORT, reload=False)
+    uvicorn.run("src.api:app", host=config.API_HOST, port=config.API_PORT, reload=False)
 
 def start_web_ui():
     """Khởi động giao diện Web UI Gradio."""
     logger.info(f"Đang khởi động Web UI Gradio tại http://127.0.0.1:{config.GRADIO_PORT} ...")
-    from app import demo
+    from src.app import demo
     demo.launch(server_name="127.0.0.1", server_port=config.GRADIO_PORT)
 
 def main():
