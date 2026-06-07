@@ -5,10 +5,10 @@ import json
 import nest_asyncio
 import edge_tts
 from pydub import AudioSegment
-from utils.logger import logger
-from utils.memory import clean_memory, log_memory_usage
-from utils.srt_utils import parse_srt
-from config import EDGE_TTS_VOICE, AUDIO_DIR
+from src.utils.logger import logger
+from src.utils.memory import clean_memory, log_memory_usage
+from src.utils.srt_utils import parse_srt
+from src.config import EDGE_TTS_VOICE, AUDIO_DIR
 
 # Thích ứng môi trường chạy async trong môi trường đồng bộ
 nest_asyncio.apply()

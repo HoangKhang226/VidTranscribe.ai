@@ -85,16 +85,17 @@ python main.py --mode cli --source "video.mp4" --model "qwen2.5:7b-instruct-q4_K
 ├── api.py                 # FastAPI Backend Service
 ├── app.py                 # Gradio Frontend Dashboard
 ├── main.py                # Central Pipeline Orchestrator
-├── config.py              # Centralized Configuration
 ├── output/                # Stored Output Data & Subtitles
-└── pipeline/              # The 6-Stage Modular Logic
-    ├── step1_ingestion.py
-    ├── step2_context.py
-    ├── step3_stt.py
-    ├── step4_translate.py
-    ├── step5_tts.py
-    └── step6_mux.py
-└── utils/                 # G2P Engine and SRT utilities
+└── src/                   # Source Code
+    ├── config.py          # Centralized Configuration
+    ├── pipeline/          # The 6-Stage Modular Logic
+    │   ├── step1_ingestion.py
+    │   ├── step2_context.py
+    │   ├── step3_stt.py
+    │   ├── step4_translate.py
+    │   ├── step5_tts.py
+    │   └── step6_mux.py
+    └── utils/             # G2P Engine and SRT utilities
 ```
 
 ---

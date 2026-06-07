@@ -3,9 +3,9 @@ import json
 import requests
 from pydub import AudioSegment
 from faster_whisper import WhisperModel
-from utils.logger import logger
-from utils.memory import clean_memory, log_memory_usage
-from config import OLLAMA_API_URL, OLLAMA_MODEL_NAME
+from src.utils.logger import logger
+from src.utils.memory import clean_memory, log_memory_usage
+from src.config import OLLAMA_API_URL, OLLAMA_MODEL_NAME
 
 def get_rough_transcript(audio_path: str, duration_sec: int = 30) -> str:
     """Cắt 30s đầu audio và chạy Whisper-Tiny để lấy văn bản thô cực nhanh."""

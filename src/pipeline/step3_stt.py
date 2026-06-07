@@ -1,9 +1,9 @@
 import os
 from faster_whisper import WhisperModel
-from utils.logger import logger
-from utils.memory import clean_memory, log_memory_usage
-from utils.srt_utils import SRTEntry, write_srt
-from config import WHISPER_MODEL_SIZE, WHISPER_DEVICE, WHISPER_COMPUTE_TYPE, SUBTITLES_DIR
+from src.utils.logger import logger
+from src.utils.memory import clean_memory, log_memory_usage
+from src.utils.srt_utils import SRTEntry, write_srt
+from src.config import WHISPER_MODEL_SIZE, WHISPER_DEVICE, WHISPER_COMPUTE_TYPE, SUBTITLES_DIR
 
 def run(audio_path: str, context: dict) -> str:
     """

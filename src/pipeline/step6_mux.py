@@ -1,8 +1,8 @@
 import os
 import subprocess
-from utils.logger import logger
-from utils.srt_utils import sanitize_srt_overlap
-from config import FINAL_DIR, BASE_DIR
+from src.utils.logger import logger
+from src.utils.srt_utils import sanitize_srt_overlap
+from src.config import FINAL_DIR, BASE_DIR
 
 def get_relative_path(absolute_path: str) -> str:
     """Chuyển đổi đường dẫn tuyệt đối sang tương đối từ BASE_DIR để tương thích với FFmpeg trên Windows."""

@@ -1,13 +1,13 @@
 import time
 import os
-from utils.logger import logger
-from utils.memory import clean_memory, log_memory_usage
-from pipeline import step1_ingestion
-from pipeline import step2_context
-from pipeline import step3_stt
-from pipeline import step4_translate
-from pipeline import step5_tts
-from pipeline import step6_mux
+from src.utils.logger import logger
+from src.utils.memory import clean_memory, log_memory_usage
+from src.pipeline import step1_ingestion
+from src.pipeline import step2_context
+from src.pipeline import step3_stt
+from src.pipeline import step4_translate
+from src.pipeline import step5_tts
+from src.pipeline import step6_mux
 
 class PipelineOrchestrator:
     def __init__(self):

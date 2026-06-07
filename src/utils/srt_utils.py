@@ -1,6 +1,6 @@
 import re
 import os
-from utils.logger import logger
+from src.utils.logger import logger
 
 class SRTEntry:
     def __init__(self, index: int, start_ms: int, end_ms: int, text: str):

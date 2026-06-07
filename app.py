@@ -2,9 +2,9 @@ import os
 import time
 import threading
 import gradio as gr
-from pipeline.orchestrator import PipelineOrchestrator
-from config import GRADIO_PORT
-from utils.logger import logger
+from src.pipeline.orchestrator import PipelineOrchestrator
+from src.config import GRADIO_PORT
+from src.utils.logger import logger
 
 # CSS tùy chỉnh cao cấp (Rich Aesthetics & Dark Glassmorphism)
 custom_css = """

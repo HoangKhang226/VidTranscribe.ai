@@ -2,10 +2,10 @@ import argparse
 import sys
 import threading
 import uvicorn
-from utils.logger import logger
-from utils.memory import clean_memory
-from pipeline.orchestrator import PipelineOrchestrator
-import config
+from src.utils.logger import logger
+from src.utils.memory import clean_memory
+from src.pipeline.orchestrator import PipelineOrchestrator
+import src.config
 
 def start_api_server():
     """Khởi động server backend FastAPI."""

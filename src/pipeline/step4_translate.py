@@ -4,11 +4,11 @@ import re
 import concurrent.futures
 from pydantic import BaseModel, Field
 from typing import List, Dict
-from utils.logger import logger
-from utils.memory import clean_memory
-from utils.srt_utils import parse_srt, write_srt
-from utils.g2p_helper import transliterate_batch
-from config import OLLAMA_API_URL, OLLAMA_MODEL_NAME, SUBTITLES_DIR
+from src.utils.logger import logger
+from src.utils.memory import clean_memory
+from src.utils.srt_utils import parse_srt, write_srt
+from src.utils.g2p_helper import transliterate_batch
+from src.config import OLLAMA_API_URL, OLLAMA_MODEL_NAME, SUBTITLES_DIR
 
 # Import LangChain components
 from langchain_ollama import ChatOllama

@@ -4,8 +4,8 @@ import os
 # Add the project root to sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from utils.logger import logger
-from pipeline import step4_translate
+from src.utils.logger import logger
+from src.pipeline import step4_translate
 
 def test_paragraph_translation():
     srt_path = "output/subtitles/subtitles_en.srt"

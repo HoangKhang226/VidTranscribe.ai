@@ -1,9 +1,9 @@
 import os
 import subprocess
 import shutil
-from utils.logger import logger
-from utils.memory import log_memory_usage
-from config import DOWNLOADS_DIR, AUDIO_DIR, FINAL_DIR
+from src.utils.logger import logger
+from src.utils.memory import log_memory_usage
+from src.config import DOWNLOADS_DIR, AUDIO_DIR, FINAL_DIR
 
 def extract_audio_and_video(video_path: str) -> tuple[str, str]:
     """

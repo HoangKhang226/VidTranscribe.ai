@@ -3,7 +3,7 @@ import os
 import re
 import json
 from g2p_en import G2p
-from utils.logger import logger
+from src.utils.logger import logger
 
 VOWEL_MAP = {
     'AA': 'a', 'AE': 'a', 'AH': 'ơ', 'AO': 'o', 'AW': 'ao', 'AY': 'ai',

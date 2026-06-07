@@ -4,9 +4,9 @@ from fastapi import FastAPI, BackgroundTasks, UploadFile, File, Form, HTTPExcept
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from pipeline.orchestrator import PipelineOrchestrator
-from config import OUTPUT_DIR, DOWNLOADS_DIR, API_HOST, API_PORT
-from utils.logger import logger
+from src.pipeline.orchestrator import PipelineOrchestrator
+from src.config import OUTPUT_DIR, DOWNLOADS_DIR, API_HOST, API_PORT
+from src.utils.logger import logger
 
 app = FastAPI(
     title="VidTranscribe.ai API",
