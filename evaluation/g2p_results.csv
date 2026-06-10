@@ -1,0 +1,121 @@
+﻿term,predicted_phonetic,expected_phonetic,similarity,status
+LangGraph,lang gra,lang gra,1.0000,PASS
+LlamaIndex,la mơ in đec,la mơ in đec,1.0000,PASS
+ScikitLearn,xi cit lơn,xi cit lơn,1.0000,PASS
+TensorFlow,ten xơ phlô,ten xơ phlô,1.0000,PASS
+XGBoost,ích gi but,ích gi but,1.0000,PASS
+PySpark,pai xpac,pai xpac,1.0000,PASS
+AutoML,o tô em eo,o tô em eo,1.0000,PASS
+Optuna,ap tun chơ,ap tun chơ,1.0000,PASS
+MinIO,min ai ô,min ai ô,1.0000,PASS
+Hadoop,ha đup,ha đup,1.0000,PASS
+BM25,25,bi em hai lăm,0.0000,FAIL
+Matplotlib,mat pơo tbi,mat pơo tbi,1.0000,PASS
+Seaborn,xi bơn,xi bơn,1.0000,PASS
+OpenCV,ô pơn xi vi,ô pơn xi vi,1.0000,PASS
+DataWarehouse,đây tơ ue hao,đây tơ ue hao,1.0000,PASS
+CRISPR,xi a ai ét pi a,xi a ai ét pi a,1.0000,PASS
+Hemoglobin,hi mơ lô bơn,hi mơ lô bơn,1.0000,PASS
+Neurotransmitter,nu rơt ran txơ mơ,nu rơt ran txơ mơ,1.0000,PASS
+Metabolism,mơ ta bơ li dơm,mơ ta bơ li dơm,1.0000,PASS
+Echocardiogram,e cô ca đi rây mơc,e cô ca đi rây mơc,1.0000,PASS
+Cardiovascular,ca đi ô va ciơ lơ,ca đi ô va ciơ lơ,1.0000,PASS
+Endocytosis,en đơ xi tơ xơ,en đơ xi tơ xơ,1.0000,PASS
+Phagocytosis,pha gơ xai tơ,pha gơ xai tơ,1.0000,PASS
+Genomics,giơ na mic,giơ na mic,1.0000,PASS
+Cytoplasm,xai tơp la dơm,xai tơp la dơm,1.0000,PASS
+Glycolysis,glai coo iơ xơ,glai coo iơ xơ,1.0000,PASS
+Antibody,an ti ba đi,an ti ba đi,1.0000,PASS
+Pathoxen,pa thơc xơn,pa thơc xơn,1.0000,PASS
+Bioinformatics,bai ô phe nơ ma tic,bai ô phe nơ ma tic,1.0000,PASS
+Liposome,li pơ xôm,li pơ xôm,1.0000,PASS
+NASDAQ,en e ét đi e qui,en e ét đi e qui,1.0000,PASS
+FinTech,phin tec,phin tec,1.0000,PASS
+Amortization,a mơ ti dây xơn,a mơ ti dây xơn,1.0000,PASS
+Hyperinflation,hai pơ in phlây xơn,hai pơ in phlây xơn,1.0000,PASS
+Arbitrage,a bit ra,a bit ra,1.0000,PASS
+Stagflation,xta phlây xơn,xta phlây xơn,1.0000,PASS
+Microeconomics,maic rô e cơ na mic,maic rô e cơ na mic,1.0000,PASS
+Macroeconomics,mac rô e cơ na mic,mac rô e cơ na mic,1.0000,PASS
+Liquidity,lic ui đơ ti,lic ui đơ ti,1.0000,PASS
+Cryptocurrency,cri pơc iơ nơ xi,cri pơc iơ nơ xi,1.0000,PASS
+EBIT,i bi ai ti,i bi ai ti,1.0000,PASS
+CAGR,xi e gi a,xi e gi a,1.0000,PASS
+NAV,en e vi,en e vi,1.0000,PASS
+FED,ép i đi,ép i đi,1.0000,PASS
+InsurTech,in xơ tec,in xơ tec,1.0000,PASS
+MongoDB,mang gô đi bi,mang gô đi bi,1.0000,PASS
+RabbitMQ,ra bơt em qui,ra bơt em qui,1.0000,PASS
+GraphQL,gra qui eo,gờ ráp qui eo,0.7826,FAIL
+OAuth2,ô o 2,ô o hai,0.6667,FAIL
+gRPC,gi a pi xi,gi a pi xi,1.0000,PASS
+DevSecOps,đe xec ap,đe xec ap,1.0000,PASS
+Nginx,ing,en gin ích,0.3077,FAIL
+Wireshark,uai xac,uai xac,1.0000,PASS
+Cloudflare,clao phla phơ,clao phla phơ,1.0000,PASS
+ClickHouse,clic hao,clic hao,1.0000,PASS
+WebSockets,ue xa cơt,ue xa cơt,1.0000,PASS
+Terraform,te rơ phom,te rơ phom,1.0000,PASS
+Ansible,an xơ bơo,an xơ bơo,1.0000,PASS
+OpenTelemetry,ô pơn tơ le mơt ri,ô pơn tơ le mơt ri,1.0000,PASS
+Prometheus,pra mi the,pra mi the,1.0000,PASS
+ChatGPT,chat gi pi ti,chat gi pi ti,1.0000,PASS
+mRNA,em a en e,em a en e,1.0000,PASS
+PostgreSQL,pa tgrây ét qui eo,pốt gờ rê ét qui eo,0.7568,FAIL
+HTML5,5,ếch ti em eo năm,0.0000,FAIL
+JavaScript,gia vơ xcrip,gia vơ xcrip,1.0000,PASS
+WordPress,uơ pre,uơ pre,1.0000,PASS
+GitHub,giit hơ,gít húp,0.5714,FAIL
+PayPal,pây pao,pây pao,1.0000,PASS
+TypeScript,taip xcrip,taip xcrip,1.0000,PASS
+MicroServices,maic rô xơ vơ xơ,maic rô xơ vơ xơ,1.0000,PASS
+SQL,ét qui eo,ét qui eo,1.0000,PASS
+API,e pi ai,e pi ai,1.0000,PASS
+JSON,giê ét ô en,giê ét ô en,1.0000,PASS
+JWT,giê đáp liu ti,giê đáp liu ti,1.0000,PASS
+CRM,xi a em,xi a em,1.0000,PASS
+ROI,a ô ai,a ô ai,1.0000,PASS
+KPI,kei pi ai,kei pi ai,1.0000,PASS
+AWS,e đáp liu ét,e đáp liu ét,1.0000,PASS
+SaaS,xa ét,xa ét,1.0000,PASS
+CI/CD,xi ai / xi đi,xi ai xi đi,0.9167,PASS
+VRAM,vi a e em,vi a e em,1.0000,PASS
+PyTorch,pai to,pai toọc,0.8571,PASS
+Ollama,ô la mơ,ô la mơ,1.0000,PASS
+FastAPI,phat e pi ai,phat e pi ai,1.0000,PASS
+Docker,đa cơ,đa cơ,1.0000,PASS
+Kubernetes,cơ bơ nơt,cơ bơ nơt,1.0000,PASS
+FFmpeg,ép pem,ép ép em péc,0.6667,FAIL
+WebUI,ue iu ai,wép diu ai,0.6667,FAIL
+B2B,2 bi,bi tu bi,0.5000,FAIL
+EBITDA,i bi ai ti đi e,i bi ai ti đi e,1.0000,PASS
+NATO,en e ti ô,en e ti ô,1.0000,PASS
+UNESCO,iu en i ét xi ô,iu en i ét xi ô,1.0000,PASS
+BIOS,bi ai ô ét,bi ai ô ét,1.0000,PASS
+URL,iu a eo,iu a eo,1.0000,PASS
+HTTP,ếch ti ti pi,ếch ti ti pi,1.0000,PASS
+DNS,đi en ét,đi en ét,1.0000,PASS
+IPv6,ai pi vi 6,ai pi vi sáu,0.8182,PASS
+RAM,a e em,a e em,1.0000,PASS
+CPU,xi pi iu,xi pi iu,1.0000,PASS
+GPU,gi pi iu,gi pi iu,1.0000,PASS
+Marketing,ma cơ ting,ma cơ ting,1.0000,PASS
+Logistics,lơ gii tic,lơ gii tic,1.0000,PASS
+Blockchain,blac hâyn,blac hâyn,1.0000,PASS
+Framework,phrâym uơc,phrâym uơc,1.0000,PASS
+Algorithm,ao gơ i đơm,ao gơ i đơm,1.0000,PASS
+Bioinformatics,bai ô phe nơ ma tic,bai ô phe nơ ma tic,1.0000,PASS
+Quantum,cuan tơm,cuan tơm,1.0000,PASS
+Cryptocurrency,cri pơc iơ nơ xi,cri pơc iơ nơ xi,1.0000,PASS
+Photosynthesis,phô tô xin thơ xi,phô tô xin thơ xi,1.0000,PASS
+AI,e ai,e ai,1.0000,PASS
+LLM,eo eo em,eo eo em,1.0000,PASS
+RAG,a e gi,a e gi,1.0000,PASS
+VAD,vi e đi,vi e đi,1.0000,PASS
+STT,ét ti ti,ét ti ti,1.0000,PASS
+TTS,ti ti ét,ti ti ét,1.0000,PASS
+MOP,em ô pi,em ô pi,1.0000,PASS
+CamelCase,ca mơo cây,ca mơo cây,1.0000,PASS
+Acronyms,ac rơ nim,ac rơ nim,1.0000,PASS
+MacBook,mac buc,mac buc,1.0000,PASS
+iPhone,ai phôn,ai phôn,1.0000,PASS

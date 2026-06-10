@@ -1,0 +1,38 @@
+[
+  {
+    "id": "case_001",
+    "input": "I am... studying AI agents trên Ollama.",
+    "gold": "Tôi đang nghiên cứu các tác nhân trí tuệ nhân tạo trên nền tảng Ô-la-ma.",
+    "predicted": "Tôi đang nghiên cứu các tác nhân trí tuệ nhân tạo trên nền tảng Ô-la-ma."
+  },
+  {
+    "id": "case_002",
+    "input": "This is like having a supercharged assistant, so ChatGPT agent mode can run workflows.",
+    "gold": "Điều này giống như có một trợ lý siêu mạnh, vì chế độ tác nhân của ChatGPT có thể chạy các quy trình làm việc.",
+    "predicted": "Điều này giống như có một trợ lý siêu mạnh, vì chế độ tác nhân của ChatGPT có thể chạy các quy trình làm việc."
+  },
+  {
+    "id": "case_003",
+    "input": "non technical users build no code flows inside Microsoft 365 and Azure.",
+    "gold": "Người dùng không chuyên kỹ thuật có thể tạo các luồng không cần code trong Microsoft 365 và Azure.",
+    "predicted": "Người dùng không chuyên kỹ thuật có thể tạo các luồng không cần code trong Microsoft 365 và Azure."
+  },
+  {
+    "id": "case_004",
+    "input": "I am study... studying machine learning with PostgreSQL and GraphQL.",
+    "gold": "Tôi đang học máy học với PostgreSQL và GraphQL.",
+    "predicted": "Tôi đang học máy học với PostgreSQL và GraphQL."
+  },
+  {
+    "id": "case_005",
+    "input": "The workflow agent updates CRM, sends follow-up emails, and runs on autopilot.",
+    "gold": "Tác nhân quy trình cập nhật CRM, gửi email theo dõi và chạy tự động.",
+    "predicted": "Tác nhân quy trình cập nhật CRM, gửi email theo dõi và chạy tự động."
+  },
+  {
+    "id": "case_006",
+    "input": "It writes scripts from front end to back end, tests, debugs, and deploys.",
+    "gold": "Nó viết mã từ frontend đến backend, kiểm thử, gỡ lỗi và triển khai.",
+    "predicted": "Nó viết mã từ frontend đến backend, kiểm thử, gỡ lỗi và triển khai."
+  }
+]

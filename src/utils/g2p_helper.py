@@ -22,16 +22,15 @@ CONSONANT_END_MAP = {
     'K': 'c', 'L': 'o', 'M': 'm', 'N': 'n', 'NG': 'ng', 'P': 'p', 'T': 't'
 }
 ENGLISH_LETTERS_MAP = {
-    'a': 'e', 'b': 'bi', 'c': 'xi', 'd': 'đi', 'e': 'i', 'f': 'ép',
-    'g': 'gi', 'h': 'ếch', 'i': 'ai', 'j': 'giê', 'k': 'kei', 'l': 'eo',
-    'm': 'em', 'n': 'en', 'o': 'ô', 'p': 'pi', 'q': 'qui', 'r': 'a',
+    'a': 'ây', 'b': 'bi', 'c': 'xi', 'd': 'đi', 'e': 'i', 'f': 'ép',
+    'g': 'gi', 'h': 'ếch', 'i': 'ai', 'j': 'giê', 'k': 'cây', 'l': 'eo',
+    'm': 'em', 'n': 'en', 'o': 'ou', 'p': 'pi', 'q': 'qui', 'r': 'a',
     's': 'ét', 't': 'ti', 'u': 'iu', 'v': 'vi', 'w': 'đáp liu', 'x': 'ích',
     'y': 'quai', 'z': 'dét'
 }
 
-CACHE_FILE_PATH = os.path.join("output", "subtitles", "phonetic_cache.json")
+from src.db.db_manager import db
 _g2p_instance = None
-_cache = None
 
 def _get_g2p():
     global _g2p_instance
@@ -50,34 +49,7 @@ def _get_g2p():
         _g2p_instance = G2p()
     return _g2p_instance
 
-def _load_cache():
-    global _cache
-    if _cache is not None:
-        return _cache
-        
-    os.makedirs(os.path.dirname(CACHE_FILE_PATH), exist_ok=True)
-    if os.path.exists(CACHE_FILE_PATH):
-        try:
-            with open(CACHE_FILE_PATH, "r", encoding="utf-8") as f:
-                _cache = json.load(f)
-            logger.info(f"Loaded {len(_cache)} entries from phonetic cache: {CACHE_FILE_PATH}")
-        except Exception as e:
-            logger.warning(f"Failed to load phonetic cache: {e}. Starting fresh.")
-            _cache = {}
-    else:
-        _cache = {}
-    return _cache
-
-def _save_cache():
-    global _cache
-    if _cache is None:
-        return
-    try:
-        os.makedirs(os.path.dirname(CACHE_FILE_PATH), exist_ok=True)
-        with open(CACHE_FILE_PATH, "w", encoding="utf-8") as f:
-            json.dump(_cache, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        logger.error(f"Failed to save phonetic cache: {e}")
+# Bỏ các hàm quản lý file cache cũ ở đây do đã có db_manager
 
 def clean_phoneme(ph: str) -> tuple:
     """Bóc tách stress digit (0, 1, 2) ra khỏi phoneme."""
@@ -180,8 +152,18 @@ def is_abbreviation(word: str) -> bool:
     if not any(char in vowels for char in clean):
         return True
         
-    # Một số cụm viết tắt ngắn phổ biến ít nguyên âm
-    if len(clean) <= 3 and clean in ["ai", "it", "ip", "ui", "ux", "io", "os", "db", "ph"]:
+    # Một số cụm viết tắt ngắn phổ biến ít nguyên âm (đa ngành: CNTT, y tế, tài chính, truyền thông...)
+    common_abbr = {
+        # CNTT
+        "ai", "it", "ip", "ui", "ux", "io", "os", "db",
+        # Khoa học / Y tế
+        "ph", "iv", "rx", "er", "ct", "bp", "hr",
+        # Tài chính / Kinh doanh
+        "vc", "pr", "hr", "kpi",
+        # Chung
+        "id", "tv", "pc", "vs", "fyi",
+    }
+    if len(clean) <= 3 and clean in common_abbr:
         return True
         
     return False
@@ -196,16 +178,18 @@ def spell_out_word(word: str) -> str:
             letters.append(char)
     return " ".join(letters)
 
-def transliterate_word(word: str) -> str:
+def transliterate_word(word: str, domain: str = None) -> str:
     """Phiên âm một từ đơn hoặc từ ghép tiếng Anh sang tiếng Việt bồi một cách tổng quát."""
     clean_w = word.strip()
     if not clean_w:
         return ""
         
-    # 1. Kiểm tra cache trước để tránh phân tích lại
-    cache = _load_cache()
-    if clean_w.lower() in cache:
-        return cache[clean_w.lower()]
+    # 1. Kiểm tra pronunciation overrides trước để tránh G2P đoán sai OOV/alphanumeric.
+    # Thứ tự ưu tiên nằm trong DatabaseManager:
+    #   domain dictionary phonetic > domain/global cache > G2P fallback
+    overrides = db.load_pronunciation_overrides(domain)
+    if clean_w.lower() in overrides:
+        return overrides[clean_w.lower()]
         
     # 2. Tách từ ghép / CamelCase / ký tự đặc biệt
     parts = split_word_parts(clean_w)
@@ -245,16 +229,15 @@ def transliterate_word(word: str) -> str:
     # Gom khoảng trắng thừa
     result = re.sub(r'\s+', ' ', result).strip()
     
-    # Lưu vào cache
-    cache[clean_w.lower()] = result
-    _save_cache()
+    # Lưu vào cache phân cấp (Hierarchical Caching)
+    db.save_to_domain_cache(domain, clean_w.lower(), result)
     return result
 
-def transliterate_batch(words: list) -> dict:
+def transliterate_batch(words: list, domain: str = None) -> dict:
     """Phiên âm hàng loạt từ tiếng Anh sang tiếng Việt bồi."""
     result = {}
     for word in words:
         clean_w = word.strip()
         if clean_w:
-            result[clean_w.lower()] = transliterate_word(clean_w)
+            result[clean_w.lower()] = transliterate_word(clean_w, domain)
     return result

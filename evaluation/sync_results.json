@@ -1,0 +1,11 @@
+{
+  "srt_path": "D:\\Project\\VidTranscribe.ai\\src\\output\\subtitles\\subtitles_vi.srt",
+  "segment_dir": "D:\\Project\\VidTranscribe.ai\\src\\output\\audio\\temp_segments",
+  "subtitle_count": 20,
+  "valid_segments": 6,
+  "missing_segments": 14,
+  "mae_ms": 2261.3333333333335,
+  "max_overflow_ms": 4136,
+  "target_mae_ms": 150.0,
+  "target_pass": false
+}

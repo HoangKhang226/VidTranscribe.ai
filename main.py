@@ -41,9 +41,16 @@ def main():
     parser.add_argument(
         "--model",
         type=str,
-        choices=["qwen2.5:3b-instruct-q4_K_M", "qwen2.5:7b-instruct-q4_K_M"],
-        default="qwen2.5:3b-instruct-q4_K_M",
-        help="Mô hình Ollama dùng để dịch thuật (qwen2.5:3b-instruct-q4_K_M hoặc qwen2.5:7b-instruct-q4_K_M)."
+        choices=["gemma4:e4b", "hf.co/unsloth/gemma-4-E4B-it-GGUF:UD-Q4_K_XL"],
+        default="gemma4:e4b",
+        help="Mô hình Ollama dùng để dịch thuật (mặc định: gemma4:e4b)."
+    )
+    parser.add_argument(
+        "--pipeline-mode",
+        type=str,
+        choices=["end_to_end", "translate_only"],
+        default="end_to_end",
+        help="end_to_end: chạy tới video cuối. translate_only: chỉ dịch, dừng để xem/sửa phụ đề."
     )
     parser.add_argument(
         "--mode", 
@@ -78,7 +85,8 @@ def main():
             final_video_path = orchestrator.run_pipeline(
                 source=args.source,
                 hardsub=args.hardsub,
-                ollama_model=args.model
+                ollama_model=args.model,
+                mode=args.pipeline_mode
             )
             logger.info(f"Đã hoàn thành xử lý. Video đầu ra lưu tại: {final_video_path}")
         except Exception as e:

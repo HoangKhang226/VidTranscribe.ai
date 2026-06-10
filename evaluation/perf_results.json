@@ -1,0 +1,14 @@
+{
+  "video": "D:\\Project\\VidTranscribe.ai\\evaluation\\Download.mp4",
+  "video_duration_sec": 95.134,
+  "processing_time_sec": 321.79019929999777,
+  "real_time_factor": 0.29563983056957155,
+  "torch_peak_vram_gb": null,
+  "nvidia_base_vram_mb": null,
+  "nvidia_end_vram_mb": null,
+  "nvidia_delta_vram_mb": null,
+  "model": "qwen2.5:3b-instruct-q4_K_M",
+  "mode": "end_to_end",
+  "hardsub": false,
+  "final_output": "D:\\Project\\VidTranscribe.ai\\src\\output\\final\\final_output.mp4"
+}

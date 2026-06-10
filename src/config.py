@@ -55,7 +55,18 @@ WHISPER_DEVICE = "cpu"        # "cpu" hoặc "cuda" (RTX 2050 4GB)
 WHISPER_COMPUTE_TYPE = "int8" # Lượng hóa để tiết kiệm RAM/VRAM
 
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL_NAME = "qwen2.5:7b-instruct-q4_K_M"
+OLLAMA_MODEL_NAME = "hf.co/unsloth/gemma-4-E4B-it-GGUF:UD-Q4_K_XL"
+
+# === Cấu hình giảm thiểu tràn VRAM cho LLM (Ollama) ===
+# GPU nhỏ (vd RTX 2050 4GB) dễ tràn VRAM với model ~6GB. Giới hạn context window
+# và tắt thinking mode giúp giảm bộ nhớ + tăng tốc. num_ctx nhỏ cho tác vụ câu ngắn,
+# num_ctx lớn cho tác vụ cần đọc nhiều câu (trích xuất thuật ngữ).
+LLM_NUM_CTX = 2048          # Tác vụ ngữ cảnh ngắn (dịch lô, phán xử, dịch từ)
+LLM_NUM_CTX_LARGE = 4096    # Tác vụ đọc nhiều câu (trích xuất thuật ngữ đầu video)
+LLM_THINK = False           # Tắt cơ chế suy luận nội bộ (thinking) của Gemma
+# num_gpu = None: để Ollama tự quyết số layer offload (an toàn nhất, tránh lỗi GGML split).
+# Đặt 0 để ép chạy CPU-only (chậm nhưng không tốn VRAM) nếu cần.
+LLM_NUM_GPU = None
 
 EDGE_TTS_VOICE = "vi-VN-NamMinhNeural"
 

@@ -1,0 +1,14 @@
+﻿group_index,subtitle_indices,audio_file,allowed_ms,audio_duration_ms,overflow_ms,status
+0,"[1, 2]",D:\Project\VidTranscribe.ai\src\output\audio\temp_segments\temp_group_0.mp3,9920,9920,0,PASS
+1,[3],D:\Project\VidTranscribe.ai\src\output\audio\temp_segments\temp_group_1.mp3,5120,5120,0,PASS
+2,[4],D:\Project\VidTranscribe.ai\src\output\audio\temp_segments\temp_group_2.mp3,6400,6400,0,PASS
+3,[5],D:\Project\VidTranscribe.ai\src\output\audio\temp_segments\temp_group_3.mp3,4880,4880,0,PASS
+4,[6],D:\Project\VidTranscribe.ai\src\output\audio\temp_segments\temp_group_4.mp3,6000,6000,0,PASS
+5,[7],D:\Project\VidTranscribe.ai\src\output\audio\temp_segments\temp_group_5.mp3,6320,6320,0,PASS
+6,[8],D:\Project\VidTranscribe.ai\src\output\audio\temp_segments\temp_group_6.mp3,5920,5920,0,PASS
+7,"[9, 10]",D:\Project\VidTranscribe.ai\src\output\audio\temp_segments\temp_group_7.mp3,8400,8396,0,PASS
+8,"[11, 12]",D:\Project\VidTranscribe.ai\src\output\audio\temp_segments\temp_group_8.mp3,9760,9760,0,PASS
+9,"[13, 14]",D:\Project\VidTranscribe.ai\src\output\audio\temp_segments\temp_group_9.mp3,8800,8800,0,PASS
+10,"[15, 16]",D:\Project\VidTranscribe.ai\src\output\audio\temp_segments\temp_group_10.mp3,7760,7760,0,PASS
+11,"[17, 18]",D:\Project\VidTranscribe.ai\src\output\audio\temp_segments\temp_group_11.mp3,8240,8240,0,PASS
+12,"[19, 20]",D:\Project\VidTranscribe.ai\src\output\audio\temp_segments\temp_group_12.mp3,7360,8060,700,OVERFLOW
