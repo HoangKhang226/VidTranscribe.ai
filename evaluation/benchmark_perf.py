@@ -83,7 +83,7 @@ def get_torch_peak_vram_gb() -> float | None:
 
 def run_performance_benchmark(
     video_path: Path = EVAL_DIR / "Download.mp4",
-    model_name: str = "qwen2.5:3b-instruct-q4_K_M",
+    model_name: str = "gemma4:e4b",
     mode: str = "end_to_end",
     hardsub: bool = False,
     include_nvidia_smi: bool = False,
