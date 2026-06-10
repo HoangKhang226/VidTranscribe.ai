@@ -27,7 +27,6 @@ EVAL_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = EVAL_DIR.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from pydub import AudioSegment  # noqa: E402
 from src.pipeline.orchestrator import PipelineOrchestrator  # noqa: E402
 
 try:
@@ -37,11 +36,32 @@ except Exception:  # pragma: no cover - benchmark should still explain missing t
 
 
 def get_media_duration_seconds(path: Path) -> float:
-    """Return media duration using pydub/ffprobe backend."""
+    """Return media duration using ffprobe metadata without decoding the stream."""
     if not path.exists():
         raise FileNotFoundError(f"Không tìm thấy video benchmark: {path}")
-    media = AudioSegment.from_file(path)
-    return len(media) / 1000.0
+
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "json",
+            str(path),
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        timeout=30,
+    )
+    data = json.loads(result.stdout)
+    duration = data.get("format", {}).get("duration")
+    if duration is None:
+        raise RuntimeError(f"Không đọc được duration từ ffprobe: {path}")
+    return float(duration)
 
 
 def get_nvidia_total_vram_used_mb() -> int | None:
