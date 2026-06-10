@@ -22,6 +22,10 @@ evaluation/*_results.csv
 evaluation/*_results.json
 !evaluation/test_cases.json
 
+# Keep documentation media tracked
+!docs/*.mp4
+!docs/*.webp
+
 # Large media artifacts
 *.mp3
 *.wav

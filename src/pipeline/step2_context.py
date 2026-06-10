@@ -31,11 +31,14 @@ class ContextAnalyzer:
         temp_cut_path = audio_path.replace(".wav", f"_temp_{duration_sec}s.wav")
         audio[:cut_ms].export(temp_cut_path, format="wav")
         
-        # 2. Tải Whisper-Tiny. Trên Colab ưu tiên CUDA để tận dụng VRAM 15GB.
-        logger.info(f"Đang nạp Whisper-Tiny ({CONTEXT_WHISPER_DEVICE}, {CONTEXT_WHISPER_COMPUTE_TYPE})...")
-        log_memory_usage("Dynamic Context - Trước khi nạp Tiny")
-        
-        model = WhisperModel("tiny", device=CONTEXT_WHISPER_DEVICE, compute_type=CONTEXT_WHISPER_COMPUTE_TYPE)
+        # 2. Tải Whisper-Tiny.
+        # LOCAL / CPU:
+        logger.info("Đang nạp Whisper-Tiny trên máy local (cpu, int8)...")
+        model = WhisperModel("tiny", device="cpu", compute_type="int8")
+        #
+        # COLAB / GPU: bỏ comment 2 dòng dưới và comment 2 dòng LOCAL ở trên.
+        # logger.info("Đang nạp Whisper-Tiny (cuda, float16)...")
+        # model = WhisperModel("tiny", device="cuda", compute_type="float16")
         
         segments, _ = model.transcribe(temp_cut_path, beam_size=1)
         text_segments = [seg.text for seg in segments]

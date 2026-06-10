@@ -50,40 +50,35 @@ for path in [OUTPUT_DIR, DOWNLOADS_DIR, AUDIO_DIR, SUBTITLES_DIR, FINAL_DIR]:
     os.makedirs(path, exist_ok=True)
 
 # Cấu hình Mô hình
-# Colab thường có ~15GB VRAM, nên mặc định ưu tiên CUDA + float16 để chạy nhanh.
-# Máy không có CUDA sẽ tự fallback về CPU + int8.
+# Mặc định để chạy ổn trên máy local/CPU. Khi chạy Colab GPU, comment block LOCAL
+# và bỏ comment block COLAB bên dưới.
+
 def _env_bool(name: str, default: bool = False) -> bool:
     value = os.environ.get(name)
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "y", "on"}
 
+# === LOCAL / CPU DEFAULT ===
+WHISPER_MODEL_SIZE = "medium"  # "tiny", "base", "small", "medium", "large-v3-turbo"
+WHISPER_DEVICE = "cpu"
+WHISPER_COMPUTE_TYPE = "int8"
+WHISPER_CPU_THREADS = 4
+WHISPER_BEAM_SIZE = 5
+WHISPER_VAD_FILTER = False
+CONTEXT_WHISPER_DEVICE = "cpu"
+CONTEXT_WHISPER_COMPUTE_TYPE = "int8"
 
-def _cuda_available() -> bool:
-    if _env_bool("VIDTRANSCRIBE_FORCE_CPU", False):
-        return False
-    try:
-        import torch
-        return torch.cuda.is_available()
-    except Exception:
-        return False
-
-
-_HAS_CUDA = _cuda_available()
-
-WHISPER_MODEL_SIZE = os.environ.get("VIDTRANSCRIBE_WHISPER_MODEL", "medium")
-WHISPER_DEVICE = os.environ.get("VIDTRANSCRIBE_WHISPER_DEVICE", "cuda" if _HAS_CUDA else "cpu")
-WHISPER_COMPUTE_TYPE = os.environ.get("VIDTRANSCRIBE_WHISPER_COMPUTE", "float16" if WHISPER_DEVICE == "cuda" else "int8")
-WHISPER_CPU_THREADS = int(os.environ.get("VIDTRANSCRIBE_WHISPER_CPU_THREADS", "4"))
-WHISPER_BEAM_SIZE = int(os.environ.get("VIDTRANSCRIBE_WHISPER_BEAM_SIZE", "3" if WHISPER_DEVICE == "cuda" else "5"))
-WHISPER_VAD_FILTER = _env_bool("VIDTRANSCRIBE_WHISPER_VAD", True)
-
-# Context step dùng tiny model. Trên Colab cho chạy CUDA để tận dụng VRAM; CPU fallback vẫn dùng int8.
-CONTEXT_WHISPER_DEVICE = os.environ.get("VIDTRANSCRIBE_CONTEXT_DEVICE", WHISPER_DEVICE)
-CONTEXT_WHISPER_COMPUTE_TYPE = os.environ.get(
-    "VIDTRANSCRIBE_CONTEXT_COMPUTE",
-    "float16" if CONTEXT_WHISPER_DEVICE == "cuda" else "int8",
-)
+# === COLAB / GPU 15GB PRESET ===
+# Bỏ comment block này khi chạy Colab để tận dụng VRAM/GPU.
+# WHISPER_MODEL_SIZE = "medium"
+# WHISPER_DEVICE = "cuda"
+# WHISPER_COMPUTE_TYPE = "float16"
+# WHISPER_CPU_THREADS = 4
+# WHISPER_BEAM_SIZE = 3
+# WHISPER_VAD_FILTER = True
+# CONTEXT_WHISPER_DEVICE = "cuda"
+# CONTEXT_WHISPER_COMPUTE_TYPE = "float16"
 
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL_NAME = "hf.co/unsloth/gemma-4-E4B-it-GGUF:UD-Q4_K_XL"

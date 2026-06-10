@@ -33,16 +33,16 @@ def run(audio_path: str, context: dict) -> str:
         WHISPER_MODEL_SIZE,
         device=WHISPER_DEVICE,
         compute_type=WHISPER_COMPUTE_TYPE,
-        cpu_threads=WHISPER_CPU_THREADS,
+        cpu_threads=4 # WHISPER_CPU_THREADS nếu chạy gpu mạnh hơn 
     )
     
     # 3. Tiến hành nhận diện âm thanh
     logger.info("Đang bóc băng toàn bộ âm thanh video...")
     segments, info = model.transcribe(
         audio_path,
-        beam_size=WHISPER_BEAM_SIZE,
+        beam_size=5, # WHISPER_BEAM_SIZE nếu chạy gpu mạnh hơn
         word_timestamps=False, # Không cần thiết cho phụ đề thông thường, giúp tăng tốc độ
-        vad_filter=WHISPER_VAD_FILTER,
+        # vad_filter=True, # WHISPER_VAD_FILTER
         initial_prompt=initial_prompt
     )
     

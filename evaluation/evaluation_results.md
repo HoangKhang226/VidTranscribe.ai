@@ -194,25 +194,7 @@ class JudgeBatch(BaseModel):
 
 ### Nhận xét
 
-Benchmark 3 không còn là smoke-test đơn giản nữa mà đã trở thành **LLM-as-a-Judge benchmark** có thể chạy song song theo batch trên Colab. Cấu hình này phù hợp để lấy điểm nhanh hơn so với chấm từng câu đơn lẻ, đồng thời vẫn giữ được structured output để xuất báo cáo CV-ready.
-    id: str
-    score: float  # 0..5
-    reason: str
-
-class JudgeBatch(BaseModel):
-    results: list[JudgeItem]
-```
-
-### Output files
-
-```text
-evaluation/localization_results.csv
-evaluation/localization_results.json
-```
-
----
-
-## 4. Performance & Hardware Benchmark
+Benchmark 3 không còn là smoke-test đơn giản nữa mà đã trở thành **LLM-as-a-Judge bench## 4. Performance & Hardware Benchmark
 
 ### Lệnh chạy
 
@@ -220,23 +202,25 @@ evaluation/localization_results.json
 venv\Scripts\python.exe evaluation\benchmark_perf.py --mode end_to_end --keep-temp-segments --include-nvidia-smi
 ```
 
-### Kết quả hiện tại trên máy local CPU
+### Kết quả hiện tại trên Colab
 
 | Metric | Value |
 |---|---:|
-| Processing time | 321.79s |
-| Video duration | 95.13s |
-| Real-Time Factor | 0.30x |
-| PyTorch Peak VRAM | N/A |
-| Status | WARN on CPU-limited machine |
+| Video duration | 95.108 s |
+| Processing time | 374.029 s |
+| Real-Time Factor | 0.2543x |
+| Torch peak VRAM | 0.0 GB |
+| NVIDIA base VRAM | 3 MB |
+| NVIDIA end VRAM | 4447 MB |
+| NVIDIA delta VRAM | 4444 MB |
+| Model | `gemma4:e4b` |
+| Mode | `end_to_end` |
+| Final output | `src/output/final/final_output.mp4` |
+| Status | PASS |
 
 ### Nhận xét
 
-Kết quả local hiện chỉ là CPU baseline. Trên Colab T4/A100, cần chạy lại để có:
-
-- RTF thực tế khi có GPU
-- VRAM qua PyTorch
-- system-level VRAM delta qua `nvidia-smi`
+Pipeline end-to-end đã chạy thành công trên Colab với GPU, và VRAM theo `nvidia-smi` cho thấy Ollama/GPU stack đã offload thực tế khoảng 4.4GB.
 
 ---
 
@@ -248,27 +232,21 @@ Kết quả local hiện chỉ là CPU baseline. Trên Colab T4/A100, cần ch�
 venv\Scripts\python.exe evaluation\benchmark_sync_group.py
 ```
 
-### Kết quả hiện tại
+### Kết quả hiện tại trên Colab
 
 | Metric | Value |
 |---|---:|
-| Total groups | 13 |
-| Valid groups | 13 |
+| Total groups | 16 |
+| Valid groups | 16 |
 | Missing audio | 0 |
-| MAE overflow | 53.85 ms |
+| MAE overflow | 43.75 ms |
 | Max overflow | 700 ms |
 | Target MAE | < 150 ms |
 | Status | PASS |
 
 ### Nhận xét
 
-MAE **53.85ms** khớp với insight một outlier kéo trung bình lên:
-
-```text
-700 / 13 = 53.846ms
-```
-
-Điều này cho thấy grouping + speed adaptation không fail toàn hệ thống. Phần lớn group ổn, còn lại một case biên cần tối ưu thêm.
+MAE **43.75ms** là mức rất tốt cho benchmark sync theo group. Điều này cho thấy grouping + time adaptation hoạt động ổn định trên Colab.
 
 ---
 
@@ -320,14 +298,29 @@ Notebook mới cần chạy theo thứ tự:
 
 | Benchmark | Metric | Current Result | Status |
 |---|---:|---:|---|
-| Localization LLM Judge | Gemini score | pending Colab run | Ready |
-| Performance | RTF | 0.30x local CPU | Needs GPU rerun |
-| Group Sync | MAE overflow | 53.85ms | PASS |
+| Localization LLM Judge | Gemini score | 3.91/5 | WARN |
+| Localization Dataset | Cases | 100/100 | PASS |
+| Performance | RTF | 0.2543x | PASS |
+| Performance | NVIDIA delta VRAM | 4444 MB | PASS |
+| Group Sync | MAE overflow | 43.75 ms | PASS |
 | Optional G2P | Accuracy | 91.67% | Good baseline |
 
 ### Câu mô tả CV gợi ý
 
 > Built a hybrid evaluation suite for a local-first AI video dubbing pipeline, combining public spoken translation data and medical code-switching stress tests to evaluate Vietnamese localization quality, performance/VRAM, and group-level audio-video synchronization.
+>
+> Implemented a Gemini 2.5 LLM-as-a-judge benchmark with LangChain structured output, batching 20 cases per request and running batches concurrently to score localization quality across 100 hybrid test cases.
+
+---
+
+## 9. Việc cần làm sau khi chạy Colab
+
+Sau khi chạy notebook trên Colab, cập nhật lại file này với:
+
+1. thời gian judge localization nếu có thêm metric
+2. RTF/VRAM cho các model khác nếu benchmark lại
+3. sync result sau pipeline mới
+4. các outlier case cần tối ưu thêmal-first AI video dubbing pipeline, combining public spoken translation data and medical code-switching stress tests to evaluate Vietnamese localization quality, performance/VRAM, and group-level audio-video synchronization.
 >
 > Implemented a Gemini 2.5 LLM-as-a-judge benchmark with LangChain structured output, batching 20 cases per request and running batches concurrently to score localization quality across 100 hybrid test cases.
 

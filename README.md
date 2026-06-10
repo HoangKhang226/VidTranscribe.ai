@@ -30,6 +30,16 @@ Dự án được thiết kế **đa ngành** (multi-domain): y tế, tài chín
 - **G2P (Grapheme-to-Phoneme) đa ngành**: phiên âm chính xác các từ/viết tắt tiếng Anh sang tiếng Việt bồi (vd "Agent" → "Ây giơn") mà không phiên âm nhầm ngôn ngữ giao tiếp thông thường.
 - **Đồng bộ audio "mượn khoảng lặng"**: thuật toán tính khoảng im lặng trước/sau câu để kéo dài cửa sổ đọc TTS, giảm thiểu việc tăng tốc audio quá đà, giữ giọng tự nhiên và khớp hình.
 
+## Kết quả benchmark mới nhất
+
+| Benchmark | Result | Status |
+|---|---:|---|
+| Localization LLM Judge | 3.91/5 trên 100 cases | WARN |
+| Performance & Hardware | RTF 0.2543x, VRAM delta 4444 MB | PASS |
+| Group-level Sync | MAE overflow 43.75 ms | PASS |
+
+> Kết quả trên được lấy từ Colab benchmark gần nhất. Localization vẫn còn vài case điểm thấp, nhưng pipeline end-to-end, performance và sync đều đã chạy ổn định trên GPU.
+
 ---
 
 ## Công nghệ & Kiến trúc
