@@ -50,23 +50,51 @@ for path in [OUTPUT_DIR, DOWNLOADS_DIR, AUDIO_DIR, SUBTITLES_DIR, FINAL_DIR]:
     os.makedirs(path, exist_ok=True)
 
 # Cấu hình Mô hình
-WHISPER_MODEL_SIZE = "medium"  # "tiny", "base", "small", "medium", "large-v3-turbo"
-WHISPER_DEVICE = "cpu"        # "cpu" hoặc "cuda" (RTX 2050 4GB)
-WHISPER_COMPUTE_TYPE = "int8" # Lượng hóa để tiết kiệm RAM/VRAM
+# Colab thường có ~15GB VRAM, nên mặc định ưu tiên CUDA + float16 để chạy nhanh.
+# Máy không có CUDA sẽ tự fallback về CPU + int8.
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _cuda_available() -> bool:
+    if _env_bool("VIDTRANSCRIBE_FORCE_CPU", False):
+        return False
+    try:
+        import torch
+        return torch.cuda.is_available()
+    except Exception:
+        return False
+
+
+_HAS_CUDA = _cuda_available()
+
+WHISPER_MODEL_SIZE = os.environ.get("VIDTRANSCRIBE_WHISPER_MODEL", "medium")
+WHISPER_DEVICE = os.environ.get("VIDTRANSCRIBE_WHISPER_DEVICE", "cuda" if _HAS_CUDA else "cpu")
+WHISPER_COMPUTE_TYPE = os.environ.get("VIDTRANSCRIBE_WHISPER_COMPUTE", "float16" if WHISPER_DEVICE == "cuda" else "int8")
+WHISPER_CPU_THREADS = int(os.environ.get("VIDTRANSCRIBE_WHISPER_CPU_THREADS", "4"))
+WHISPER_BEAM_SIZE = int(os.environ.get("VIDTRANSCRIBE_WHISPER_BEAM_SIZE", "3" if WHISPER_DEVICE == "cuda" else "5"))
+WHISPER_VAD_FILTER = _env_bool("VIDTRANSCRIBE_WHISPER_VAD", True)
+
+# Context step dùng tiny model. Trên Colab cho chạy CUDA để tận dụng VRAM; CPU fallback vẫn dùng int8.
+CONTEXT_WHISPER_DEVICE = os.environ.get("VIDTRANSCRIBE_CONTEXT_DEVICE", WHISPER_DEVICE)
+CONTEXT_WHISPER_COMPUTE_TYPE = os.environ.get(
+    "VIDTRANSCRIBE_CONTEXT_COMPUTE",
+    "float16" if CONTEXT_WHISPER_DEVICE == "cuda" else "int8",
+)
 
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL_NAME = "hf.co/unsloth/gemma-4-E4B-it-GGUF:UD-Q4_K_XL"
 
-# === Cấu hình giảm thiểu tràn VRAM cho LLM (Ollama) ===
-# GPU nhỏ (vd RTX 2050 4GB) dễ tràn VRAM với model ~6GB. Giới hạn context window
-# và tắt thinking mode giúp giảm bộ nhớ + tăng tốc. num_ctx nhỏ cho tác vụ câu ngắn,
-# num_ctx lớn cho tác vụ cần đọc nhiều câu (trích xuất thuật ngữ).
-LLM_NUM_CTX = 2048          # Tác vụ ngữ cảnh ngắn (dịch lô, phán xử, dịch từ)
-LLM_NUM_CTX_LARGE = 4096    # Tác vụ đọc nhiều câu (trích xuất thuật ngữ đầu video)
-LLM_THINK = False           # Tắt cơ chế suy luận nội bộ (thinking) của Gemma
-# num_gpu = None: để Ollama tự quyết số layer offload (an toàn nhất, tránh lỗi GGML split).
-# Đặt 0 để ép chạy CPU-only (chậm nhưng không tốn VRAM) nếu cần.
-LLM_NUM_GPU = None
+# === Cấu hình VRAM cho LLM (Ollama) ===
+# None để Ollama tự offload tối đa theo VRAM hiện có. Trên Colab 15GB thường sẽ dùng GPU tốt hơn.
+LLM_NUM_CTX = int(os.environ.get("VIDTRANSCRIBE_LLM_NUM_CTX", "2048"))
+LLM_NUM_CTX_LARGE = int(os.environ.get("VIDTRANSCRIBE_LLM_NUM_CTX_LARGE", "4096"))
+LLM_THINK = _env_bool("VIDTRANSCRIBE_LLM_THINK", False)
+_llm_num_gpu = os.environ.get("VIDTRANSCRIBE_LLM_NUM_GPU")
+LLM_NUM_GPU = int(_llm_num_gpu) if _llm_num_gpu not in (None, "", "auto") else None
 
 EDGE_TTS_VOICE = "vi-VN-NamMinhNeural"
 

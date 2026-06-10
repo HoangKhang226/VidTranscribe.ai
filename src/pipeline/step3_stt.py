@@ -3,7 +3,15 @@ from faster_whisper import WhisperModel
 from src.utils.logger import logger
 from src.utils.memory import clean_memory, log_memory_usage
 from src.utils.srt_utils import SRTEntry, write_srt
-from src.config import WHISPER_MODEL_SIZE, WHISPER_DEVICE, WHISPER_COMPUTE_TYPE, SUBTITLES_DIR
+from src.config import (
+    WHISPER_MODEL_SIZE,
+    WHISPER_DEVICE,
+    WHISPER_COMPUTE_TYPE,
+    WHISPER_CPU_THREADS,
+    WHISPER_BEAM_SIZE,
+    WHISPER_VAD_FILTER,
+    SUBTITLES_DIR,
+)
 
 def run(audio_path: str, context: dict) -> str:
     """
@@ -25,15 +33,16 @@ def run(audio_path: str, context: dict) -> str:
         WHISPER_MODEL_SIZE,
         device=WHISPER_DEVICE,
         compute_type=WHISPER_COMPUTE_TYPE,
-        cpu_threads=4
+        cpu_threads=WHISPER_CPU_THREADS,
     )
     
     # 3. Tiến hành nhận diện âm thanh
     logger.info("Đang bóc băng toàn bộ âm thanh video...")
     segments, info = model.transcribe(
         audio_path,
-        beam_size=5,
+        beam_size=WHISPER_BEAM_SIZE,
         word_timestamps=False, # Không cần thiết cho phụ đề thông thường, giúp tăng tốc độ
+        vad_filter=WHISPER_VAD_FILTER,
         initial_prompt=initial_prompt
     )
     

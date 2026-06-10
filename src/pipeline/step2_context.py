@@ -5,7 +5,15 @@ from pydub import AudioSegment
 from faster_whisper import WhisperModel
 from src.utils.logger import logger
 from src.utils.memory import clean_memory, log_memory_usage
-from src.config import OLLAMA_API_URL, OLLAMA_MODEL_NAME, LLM_NUM_CTX, LLM_THINK, LLM_NUM_GPU
+from src.config import (
+    OLLAMA_API_URL,
+    OLLAMA_MODEL_NAME,
+    LLM_NUM_CTX,
+    LLM_THINK,
+    LLM_NUM_GPU,
+    CONTEXT_WHISPER_DEVICE,
+    CONTEXT_WHISPER_COMPUTE_TYPE,
+)
 
 class ContextAnalyzer:
     """Module nhận diện chủ đề và ngữ cảnh động (Dynamic Context) từ audio."""
@@ -23,11 +31,11 @@ class ContextAnalyzer:
         temp_cut_path = audio_path.replace(".wav", f"_temp_{duration_sec}s.wav")
         audio[:cut_ms].export(temp_cut_path, format="wav")
         
-        # 2. Tải Whisper-Tiny chạy trên CPU để không chiếm VRAM GPU
-        logger.info("Đang nạp Whisper-Tiny trên CPU...")
+        # 2. Tải Whisper-Tiny. Trên Colab ưu tiên CUDA để tận dụng VRAM 15GB.
+        logger.info(f"Đang nạp Whisper-Tiny ({CONTEXT_WHISPER_DEVICE}, {CONTEXT_WHISPER_COMPUTE_TYPE})...")
         log_memory_usage("Dynamic Context - Trước khi nạp Tiny")
         
-        model = WhisperModel("tiny", device="cpu", compute_type="int8")
+        model = WhisperModel("tiny", device=CONTEXT_WHISPER_DEVICE, compute_type=CONTEXT_WHISPER_COMPUTE_TYPE)
         
         segments, _ = model.transcribe(temp_cut_path, beam_size=1)
         text_segments = [seg.text for seg in segments]
