@@ -1,24 +1,22 @@
 # Thiết kế: Khắc phục lỗi LLM dịch sót / dịch không hết (Incomplete Translation Recovery)
 
-> Tài liệu thiết kế kỹ thuật (đa ngành). Mô tả vấn đề, nguyên nhân gốc, kiến
-> trúc giải pháp nhiều lớp, và kế hoạch kiểm thử cho bước Dịch thuật
-> (`src/pipeline/step4_translate.py`).
+> Tài liệu thiết kế kỹ thuật cho pipeline dịch phụ đề đa ngành của VidTranscribe.ai.
+> Mô tả cách phát hiện, phân loại, và sửa các token/cụm tiếng Anh còn sót sau bước dịch
+> (`src/pipeline/step4_translate.py`) bằng một chuỗi kiểm tra nhiều lớp: tự kiểm tra trong lô,
+> validator hậu dịch, LLM adjudicator, cache, và domain lexicon.
 
 ---
 
 ## 1. Bối cảnh & Phạm vi
 
-Pipeline lồng tiếng AI dịch phụ đề tiếng Anh (`subtitles_en.srt`) sang tiếng Việt
-theo từng lô (batch) bằng LLM (Ollama). Đầu ra gồm:
+Pipeline lồng tiếng AI dịch phụ đề tiếng Anh (`subtitles_en.srt`) sang tiếng Việt theo batch bằng LLM (Ollama / Gemini judge tùy chế độ). Đầu ra chính gồm:
 
-- `subtitles_vi.srt`: phụ đề tiếng Việt.
-- `subtitles_vi.json`: metadata chứa `translated_text` và `phonetic_text`.
+- `subtitles_vi.srt`: phụ đề tiếng Việt sau khi rà soát.
+- `subtitles_vi.json`: metadata chứa `translated_text`, `phonetic_text`, và các term đã được xác nhận.
 
-Tài liệu này tập trung vào **một lớp lỗi cụ thể**: LLM *có* trả về bản dịch
-nhưng bản dịch **không hoàn chỉnh** — còn sót lại từ/cụm tiếng Anh chưa được xử lý.
+Tài liệu này tập trung vào **lỗi dịch sót**: LLM có trả về bản dịch nhưng vẫn để sót token/cụm tiếng Anh trong câu VI, hoặc giữ nhầm một cụm đáng lẽ phải được dịch. Đây là lỗi ảnh hưởng trực tiếp đến trải nghiệm người xem vì tạo cảm giác câu nói bị ngắt mạch, còn lẫn tiếng Anh chưa xử lý.
 
-Yêu cầu xuyên suốt: **mọi cơ chế phải đa ngành** (y tế, tài chính, pháp lý, công
-nghệ, ẩm thực...). Không hardcode từ vựng hay luật riêng cho một lĩnh vực.
+Yêu cầu xuyên suốt: **mọi cơ chế phải đa ngành** (y tế, tài chính, pháp lý, công nghệ, ẩm thực, logistics, hàng không...). Không hardcode từ vựng hay luật riêng cho một lĩnh vực.
 
 ---
 
@@ -28,26 +26,23 @@ nghệ, ẩm thực...). Không hardcode từ vựng hay luật riêng cho một
 |---|----------|-----------------|-----------|
 | A | **Sót từ phổ thông** | "all without you micromanaging" → "...mà không cần bạn micromanaging nó" | Phải dịch: "quản lý vi mô" |
 | B | **Sót cụm chỉ dẫn/đếm** | "Number two, ..." → "Number two, ..." | "Số hai, ..." |
-| C | **Thuật ngữ ngành giữ nguyên (đúng)** | "workflow agents" → "workflow agents" | Giữ nguyên (đúng) |
-| D | **Thuật ngữ mới do model suy luận** | "Genspark super agent" → giữ "super agent" | Cần xác nhận giữ hay dịch |
-| E | **Rớt từ cuối câu (truncation)** | "into a polished" → "thành một bản" (mất "polished") | Giữ đủ ý, không bịa |
+| C | **Thuật ngữ ngành được giữ đúng** | "workflow agents" → "workflow agents" | Giữ nguyên |
+| D | **Thuật ngữ mới / tên riêng / acronym** | "Genspark super agent", "BM25", "OAuth2" | Cần quyết định giữ hay dịch theo ngữ cảnh đa ngành |
+| E | **Rớt từ cuối câu (truncation)** | "into a polished" → "thành một bản" | Giữ đủ ý, không bịa |
 | F | **Gộp câu / lệch index** | 3 dòng dịch gộp thành 1 | Tách lại theo index |
 
-Trọng tâm tài liệu: **A, B, D**. (C là hành vi đúng; E, F đã có cơ chế xử lý ở
-lớp 1 — xem mục 4.1.)
+Trọng tâm tài liệu: **A, B, D**. C là hành vi đúng. E và F đã được xử lý ở lớp 1.
 
 ---
 
 ## 3. Nguyên nhân gốc
 
-1. **LLM bỏ sót do batch dài**: dịch 3 câu/lô, model đôi khi giữ nguyên một vài
-   token tiếng Anh vì "ngại" dịch hoặc tưởng là thuật ngữ.
-2. **Ranh giới thuật ngữ mơ hồ**: model không biết chắc một từ là thuật ngữ ngành
-   (giữ nguyên) hay từ phổ thông (phải dịch). Đây là **bản chất nhập nhằng**, cần
-   một bước phán xử riêng.
-3. **Khó phân biệt từ tiếng Việt không dấu với tiếng Anh**: ví dụ "vi", "kinh",
-   "doanh" là tiếng Việt nhưng viết bằng chữ Latin → dễ bị nhận nhầm là tiếng Anh
-   chưa dịch.
+1. **LLM bỏ sót do batch dài hoặc ngữ cảnh rộng**: model đôi khi giữ nguyên token tiếng Anh vì tưởng là thuật ngữ hoặc vì không ưu tiên dịch từng chi tiết.
+2. **Ranh giới thuật ngữ mơ hồ**: không biết từ nào nên giữ nguyên, từ nào phải dịch. Đây là bản chất nhập nhằng của bài toán hậu dịch.
+3. **Từ Latin hợp lệ trong tiếng Việt**: ví dụ "vi", "kinh", "doanh" không phải tiếng Anh nhưng trông giống token Latin, dễ bị nhận nhầm nếu chỉ quét bề mặt.
+4. **Cụm thuật ngữ nhiều từ**: nhiều term đúng phải được giữ cả cụm, không được tách lẻ từng token.
+
+Giải pháp mới xử lý gốc lỗi bằng cách kết hợp `PostTranslationValidator` + `TranslationAdjudicator` + cache + domain lexicon, thay vì phụ thuộc vào một lần prompt duy nhất.
 
 ---
 

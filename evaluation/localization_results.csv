@@ -1,7 +1,0 @@
-﻿id,input,gold,predicted,token_error_rate,exact_match
-case_001,I am... studying AI agents trên Ollama.,Tôi đang nghiên cứu các tác nhân trí tuệ nhân tạo trên nền tảng Ô-la-ma.,Tôi đang nghiên cứu các tác nhân trí tuệ nhân tạo trên nền tảng Ô-la-ma.,0.0000,True
-case_002,"This is like having a supercharged assistant, so ChatGPT agent mode can run workflows.","Điều này giống như có một trợ lý siêu mạnh, vì chế độ tác nhân của ChatGPT có thể chạy các quy trình làm việc.","Điều này giống như có một trợ lý siêu mạnh, vì chế độ tác nhân của ChatGPT có thể chạy các quy trình làm việc.",0.0000,True
-case_003,non technical users build no code flows inside Microsoft 365 and Azure.,Người dùng không chuyên kỹ thuật có thể tạo các luồng không cần code trong Microsoft 365 và Azure.,Người dùng không chuyên kỹ thuật có thể tạo các luồng không cần code trong Microsoft 365 và Azure.,0.0000,True
-case_004,I am study... studying machine learning with PostgreSQL and GraphQL.,Tôi đang học máy học với PostgreSQL và GraphQL.,Tôi đang học máy học với PostgreSQL và GraphQL.,0.0000,True
-case_005,"The workflow agent updates CRM, sends follow-up emails, and runs on autopilot.","Tác nhân quy trình cập nhật CRM, gửi email theo dõi và chạy tự động.","Tác nhân quy trình cập nhật CRM, gửi email theo dõi và chạy tự động.",0.0000,True
-case_006,"It writes scripts from front end to back end, tests, debugs, and deploys.","Nó viết mã từ frontend đến backend, kiểm thử, gỡ lỗi và triển khai.","Nó viết mã từ frontend đến backend, kiểm thử, gỡ lỗi và triển khai.",0.0000,True
