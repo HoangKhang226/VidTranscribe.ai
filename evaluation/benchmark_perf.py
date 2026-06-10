@@ -180,7 +180,7 @@ def run_performance_benchmark(
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run end-to-end performance benchmark.")
     parser.add_argument("--video", type=Path, default=EVAL_DIR / "Download.mp4")
-    parser.add_argument("--model", default="qwen2.5:3b-instruct-q4_K_M")
+    parser.add_argument("--model", default="gemma4:e4b")
     parser.add_argument("--mode", choices=["end_to_end", "translate_only"], default="end_to_end")
     parser.add_argument("--hardsub", action="store_true")
     parser.add_argument("--include-nvidia-smi", action="store_true")
