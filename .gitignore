@@ -48,3 +48,5 @@ evaluation/*_results.json
 *.njsproj
 *.sln
 *.swp
+
+scratch/
