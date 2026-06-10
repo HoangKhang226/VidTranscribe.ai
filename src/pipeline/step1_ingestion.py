@@ -5,6 +5,54 @@ from src.utils.logger import logger
 from src.utils.memory import log_memory_usage
 from src.config import DOWNLOADS_DIR, AUDIO_DIR, FINAL_DIR
 
+def _decode_tail(result: subprocess.CompletedProcess[bytes], limit: int = 4000) -> str:
+    return result.stderr.decode("utf-8", errors="ignore")[-limit:]
+
+
+def normalize_input_media(video_path: str) -> str:
+    """
+    Chuẩn hóa container/audio trước khi pipeline xử lý.
+
+    Một số video tải từ mạng dùng HE-AACv2 hoặc stream AAC không chuẩn khiến FFmpeg
+    spam lỗi decode ở các bước sau. Bước này ép audio về AAC-LC phổ thông trong một
+    file trung gian ổn định hơn, còn video thì copy stream để tránh re-encode tốn thời gian.
+    """
+    normalized_output = os.path.join(DOWNLOADS_DIR, "input_normalized.mp4")
+    normalize_cmd = [
+        "ffmpeg", "-y",
+        "-hide_banner",
+        "-loglevel", "error",
+        "-err_detect", "ignore_err",
+        "-fflags", "+discardcorrupt",
+        "-i", video_path,
+        "-map", "0:v:0",
+        "-map", "0:a:0?",
+        "-c:v", "copy",
+        "-c:a", "aac",
+        "-profile:a", "aac_low",
+        "-ar", "44100",
+        "-ac", "2",
+        "-b:a", "128k",
+        "-movflags", "+faststart",
+        normalized_output,
+    ]
+
+    logger.info("Đang chuẩn hóa input media sang AAC-LC...")
+    result = subprocess.run(
+        normalize_cmd,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    normalized_ok = os.path.exists(normalized_output) and os.path.getsize(normalized_output) > 0
+    if normalized_ok:
+        if result.returncode != 0:
+            logger.warning("FFmpeg báo lỗi khi chuẩn hóa nhưng vẫn tạo được file normalized; tiếp tục pipeline.")
+        return normalized_output
+
+    raise RuntimeError(f"Không chuẩn hóa được input media: {_decode_tail(result)}")
+
+
 def extract_audio_and_video(video_path: str) -> tuple[str, str]:
     """
     Tách luồng video và audio:
@@ -13,6 +61,7 @@ def extract_audio_and_video(video_path: str) -> tuple[str, str]:
     """
     logger.info(f"Bắt đầu tách luồng từ video gốc: {video_path}")
     log_memory_usage("Ingestion - Khởi chạy FFmpeg")
+    normalized_input = normalize_input_media(video_path)
     
     # Định nghĩa các đường dẫn đầu ra
     audio_output = os.path.join(AUDIO_DIR, "audio_original.wav")
@@ -21,9 +70,9 @@ def extract_audio_and_video(video_path: str) -> tuple[str, str]:
     # 1. Trích xuất Audio (16kHz, 1 channel/mono, 16-bit PCM WAV)
     audio_cmd = [
         "ffmpeg", "-y",
-        "-err_detect", "ignore_err",
-        "-fflags", "+discardcorrupt",
-        "-i", video_path,
+        "-hide_banner",
+        "-loglevel", "error",
+        "-i", normalized_input,
         "-vn",
         "-acodec", "pcm_s16le",
         "-ar", "16000",
@@ -34,9 +83,9 @@ def extract_audio_and_video(video_path: str) -> tuple[str, str]:
     # 2. Trích xuất Video không tiếng (Copy Stream cực nhanh, không re-encode)
     video_cmd = [
         "ffmpeg", "-y",
-        "-err_detect", "ignore_err",
-        "-fflags", "+discardcorrupt",
-        "-i", video_path,
+        "-hide_banner",
+        "-loglevel", "error",
+        "-i", normalized_input,
         "-an",
         "-vcodec", "copy",
         video_output
@@ -72,9 +121,9 @@ def extract_audio_and_video(video_path: str) -> tuple[str, str]:
     if not video_ok:
         error_parts.append("video output missing")
     if audio_result.returncode != 0:
-        error_parts.append(audio_result.stderr.decode('utf-8', errors='ignore')[-4000:])
+        error_parts.append(_decode_tail(audio_result))
     if video_result.returncode != 0:
-        error_parts.append(video_result.stderr.decode('utf-8', errors='ignore')[-4000:])
+        error_parts.append(_decode_tail(video_result))
     raise RuntimeError(f"FFmpeg error: {' | '.join(error_parts)}")
 
 def run(source: str) -> tuple[str, str]:
